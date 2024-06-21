@@ -1,0 +1,6 @@
+body {
+    background-color: whitesmoke;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden; /* Esto evita el scroll horizontal */
+}
