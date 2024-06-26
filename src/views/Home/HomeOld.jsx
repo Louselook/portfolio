@@ -1,13 +1,12 @@
 import React, { useEffect, useState  } from 'react';
 import './HomePage.css';
 import { useNavigate } from 'react-router-dom';
-import {TextAnimation} from '../../utils/components/TextAnimation'
-import IconCarousel from '../../utils/components/IconsCarousel';
 
 const HomePage = () => {
   const navigate = useNavigate();
   const [showIntroduction, setShowIntroduction] = useState(false);
-  const [showTextAnimation, setShowTextAnimation] = useState(false);
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
+  const words = ["Back-End", "Front-End", "IA"];
 
   const goAboutMePage = () => {
     navigate('/about');
@@ -34,31 +33,15 @@ const HomePage = () => {
     setTimeout(() => {
         setShowIntroduction(true);
     }, titleAnimationDuration);
-
-        // Esperar 5 segundos antes de mostrar TextAnimation
-        setTimeout(() => {
-          setShowTextAnimation(true);
-      }, 2500);
 }, []);
 
-  const texts = [
-    " ",
-    "Back-end",
-    "Front-end",
-    "Data analytics",
-    "Data science",
-    "IA"
-    // "by @GevStack"
-  ];
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setCurrentWordIndex((prevIndex) => (prevIndex + 1) % words.length);
+    }, 1000); // Cambia de palabra cada 2 segundos
 
-  const texts2 = [
-    "Back-end",
-    "Front-end",
-    "Data analytics",
-    "Data science",
-    "IA"
-    // "by @GevStack"
-  ];
+    return () => clearInterval(intervalId);
+  }, [words.length]);
 
   return (
     <>
@@ -79,21 +62,10 @@ const HomePage = () => {
           </div>
           <div className='element2banner1'>
             <div className='sub1ElementBanner1'>
-                {showTextAnimation ? (
-                  <IconCarousel />
-                ) : (
-                  <span id="text1"></span>
-                )}
+              <h1>Tecnologias</h1>
             </div>
             <div className='sub2ElementBanner1'>
-              <h1>
-                {showTextAnimation ? (
-                  <TextAnimation texts={texts}  texts2={texts2}/>
-                ) : (
-                  <span id="text1"></span>
-                )}
-                <span id="text2"></span>
-              </h1>
+              <h1>{words[currentWordIndex]}</h1>
             </div>
           </div>
         </div>

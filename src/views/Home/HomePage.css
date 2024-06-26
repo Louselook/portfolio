@@ -120,6 +120,8 @@
     width: 50%;
     border-radius: 20px;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
+    
+    position: relative;
 }
 .sub1ElementBanner1:hover {
     transform: scale(1.03);
@@ -133,7 +135,21 @@
     border-radius: 20px;
     margin-left: 17px;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
+
+    filter: blur(0.4px);
+    /* Estilos flexbox para centrar el contenido */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
 }
+
+@import url("https://fonts.googleapis.com/css?family=Raleway:900&display=swap");
+#text1,
+#text2 {
+    font-size: 48pt;
+}
+
 .sub2ElementBanner1:hover {
     transform: scale(1.03);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
@@ -165,3 +181,7 @@
     color: aliceblue;
     padding: 20px;
 }
+
+
+/* // */
+
