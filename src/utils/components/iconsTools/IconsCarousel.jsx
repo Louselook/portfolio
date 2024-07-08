@@ -3,13 +3,13 @@ import { CSSTransition, TransitionGroup } from 'react-transition-group';
 import './ImageCarousel.css';
 
 const images = [
-  require('../../assets/flutter.png'),
-  require('../../assets/fastapi.webp'),
-  require('../../assets/react.png'),
-  require('../../assets/sqlserver.webp'),
-  require('../../assets/supabase.png'),
-  require('../../assets/firebase.png'),
-  require('../../assets/net.png'),
+  require('../../../assets/iconTools/flutter.png'),
+  require('../../../assets/iconTools/fastapi.webp'),
+  require('../../../assets/iconTools/react.png'),
+  require('../../../assets/iconTools/sqlserver.webp'),
+  require('../../../assets/iconTools/supabase.png'),
+  require('../../../assets/iconTools/firebase.png'),
+  require('../../../assets/iconTools/net.png'),
 ];
 
 const IconCarousel = () => {

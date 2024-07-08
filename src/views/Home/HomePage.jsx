@@ -1,13 +1,15 @@
-import React, { useEffect, useState  } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import './HomePage.css';
 import { useNavigate } from 'react-router-dom';
-import {TextAnimation} from '../../utils/components/TextAnimation'
-import IconCarousel from '../../utils/components/IconsCarousel';
+import {TextAnimation} from '../../utils/components/iconsTools/TextAnimation'
+import IconCarousel from '../../utils/components/iconsTools/IconsCarousel';
+import CarouselProyects from '../../utils/components/carrusel/carousel'
 
 const HomePage = () => {
   const navigate = useNavigate();
   const [showIntroduction, setShowIntroduction] = useState(false);
   const [showTextAnimation, setShowTextAnimation] = useState(false);
+  const contenedorRef = useRef(null);
 
   const goAboutMePage = () => {
     navigate('/about');
@@ -39,7 +41,47 @@ const HomePage = () => {
         setTimeout(() => {
           setShowTextAnimation(true);
       }, 2500);
+
+      return () => {
+        // Limpiar los efectos y animaciones aquí si es necesario
+      };
 }, []);
+
+useEffect(() => {
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach(entry => {
+        const proyectsViewsElement = document.querySelector('.proyectsViews');
+        const proyecTitleElement = document.querySelector('#proyecTitle-text');
+        if (entry.isIntersecting && entry.intersectionRatio === 1) {
+          console.log("Elemento visible");
+          proyectsViewsElement.style.backgroundColor = 'black';
+          proyecTitleElement.style.color = 'whitesmoke'
+        } else {
+          console.log("Elemento No visible");
+          proyectsViewsElement.style.backgroundColor = 'whitesmoke';
+          proyecTitleElement.style.color = 'black'
+        }
+      });
+    },
+    {
+      threshold: 1.0 // 1.0 significa que el 100% del elemento debe estar visible
+    }
+  );
+
+  const currentRef = contenedorRef.current; // Almacena la referencia actual en una variable local
+
+  if (currentRef) {
+    observer.observe(currentRef);
+  }
+
+  return () => {
+    if (currentRef) {
+      observer.unobserve(currentRef);
+    }
+  };
+}, []); // Asegúrate de pasar un arreglo vacío como segundo argumento para que el efecto se ejecute solo una vez
+
 
   const texts = [
     " ",
@@ -101,7 +143,24 @@ const HomePage = () => {
           Sobre Me
         </div>
       </div>
-      <div className='contenedor2'></div>
+      <div 
+        className='contenedor2'>
+        <div className='proyectsViews'>
+          <div className='banner1' >
+            <div className='proyecTitlebanner'>
+              <h1 id="proyecTitle-text">
+                {/* COLECCION DE PROYECTOS PERSONALES */}
+                COLLECTION OF PERSONAL PROJECTS.
+              </h1>
+            </div>
+          </div>         
+          <div className='proyectsCarrucel'  >
+            <CarouselProyects />
+          </div>
+        </div>
+        <div className='viewElement' ref={contenedorRef}></div>
+      </div>
+      
     </>
   );
 }

@@ -36,10 +36,10 @@
 }
 
 .element1banner1:hover .letter {
-    -webkit-text-stroke: 2px aliceblue; /* Cambiar color del borde en hover */
+    -webkit-text-stroke: 2px whitesmoke; /* Cambiar color del borde en hover */
 }
 .element1banner1:hover .introduccion {
-    color: aliceblue;
+    color: whitesmoke;
 }
 .element1banner1:hover {
     background-color: rgb(8, 8, 40); /* Cambiar color de fondo en hover */
@@ -57,7 +57,7 @@
     opacity: 0;
     font-size: 2em;
     margin: 0 5px;
-    /* color: aliceblue; */
+    /* color: whitesmoke; */
     color: transparent;
     /* Hacer las letras blancas huecas */
     -webkit-text-stroke: 2px black;
@@ -167,8 +167,17 @@
 
 .banner2:hover {
     transform: scale(1.03);
-    /* box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); */
+    box-shadow: 0 4px 8px rgba(88, 79, 79, 0.2);
+    background-image: linear-gradient(-20deg, rgba(77, 189, 233, 0.793) 40%,rgba(199, 197, 197, 0.714), rgba(245, 245, 245, 0.786) );
+
 }
+
+/* // */
+.element2banner1 h1{
+    color: whitesmoke;
+    padding: 20px;
+}
+
 
 /* // */
 .contenedor2{
@@ -176,12 +185,23 @@
     width: 100vw;
 }
 
-/* // */
-.element2banner1 h1{
-    color: aliceblue;
-    padding: 20px;
+.proyectsViews{
+    width: 100%;
+    height: 100%;
+    transition: background-color 0.3s ease-out;
 }
 
+.proyecTitlebanner {
+    padding-top: 30px;
+}
 
-/* // */
+#proyecTitle-text {
+    font-family: 'Poppins', sans-serif; 
+    font-size: 3.3vw;
+    transition: color 0.3s ease-out;
+}
 
+.proyectsCarrucel{
+    margin: 0 20px 0 20px;
+    /* border-radius: 20px; */
+}

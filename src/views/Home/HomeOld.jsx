@@ -1,6 +1,7 @@
 import React, { useEffect, useState  } from 'react';
-import './HomePage.css';
 import { useNavigate } from 'react-router-dom';
+import './HomePage.css';
+import CarouselProyects from '../../utils/components/carrusel/carousel'
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -74,6 +75,7 @@ const HomePage = () => {
         </div>
       </div>
       <div className='contenedor2'></div>
+      <CarouselProyects />
     </>
   );
 }
