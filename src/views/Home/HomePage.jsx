@@ -55,12 +55,12 @@ useEffect(() => {
         const proyecTitleElement = document.querySelector('#proyecTitle-text');
         if (entry.isIntersecting && entry.intersectionRatio === 1) {
           console.log("Elemento visible");
-          proyectsViewsElement.style.backgroundColor = 'black';
+          proyectsViewsElement.style.backgroundColor = 'rgb(6, 6, 34)';
           proyecTitleElement.style.color = 'whitesmoke'
         } else {
           console.log("Elemento No visible");
           proyectsViewsElement.style.backgroundColor = 'whitesmoke';
-          proyecTitleElement.style.color = 'black'
+          proyecTitleElement.style.color = 'rgb(6, 6, 34)'
         }
       });
     },

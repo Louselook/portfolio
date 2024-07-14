@@ -4,3 +4,12 @@ body {
     padding: 0;
     overflow-x: hidden; /* Esto evita el scroll horizontal */
 }
+
+/* Colores Globales */
+:root {
+    --oscuro-principal-bg: rgb(6, 6, 34);
+    --oscuro-principal-text: black;
+    --blanco-principal-bg: whitesmoke;
+    /* Puedes añadir más variables aquí */
+  }
+  
