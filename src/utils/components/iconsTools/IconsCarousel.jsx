@@ -9,7 +9,6 @@ const images = [
   require('../../../assets/iconTools/sqlserver.webp'),
   require('../../../assets/iconTools/supabase.png'),
   require('../../../assets/iconTools/firebase.png'),
-  require('../../../assets/iconTools/net.png'),
 ];
 
 const IconCarousel = () => {

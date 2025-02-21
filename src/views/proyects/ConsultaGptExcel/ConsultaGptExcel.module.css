@@ -1,0 +1,127 @@
+.back {
+    position:absolute;
+    top: 10px;
+    left: 20px;
+    z-index: 100;
+    background-color: #007bff;
+    color: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); /* Sombra para resaltar */
+    transition: transform 0.3s ease, background-color 0.3s ease;
+    text-decoration: none;
+    padding: 0 10px;
+}
+  
+.back:hover {
+    background-color: #0056b3; /* Cambia el color al pasar el mouse */
+    transform: scale(1.1); /* Amplía ligeramente al pasar el mouse */
+}
+  
+.back:active {
+    transform: scale(0.9); /* Reduce ligeramente al hacer clic */
+}
+  
+.back-arrow {
+    font-size: 24px;
+}
+
+/* acaba el resto */
+
+.forma1 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 50px 10%;
+    background: linear-gradient(to right, #f8f9fa, #e9ecef);
+}
+
+.forma1Text h1 {
+    font-size: 48px;
+    color: #222;
+}
+
+.forma1Text span {
+    color: #007bff;
+    font-weight: bold;
+}
+
+.forma1Text p {
+    font-size: 18px;
+    color: #555;
+}
+
+.watchBtn {
+    background-color: #007bff;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 20px;
+}
+
+.watchBtn:hover {
+    background-color: #0056b3;
+}
+
+/* Galería de Proyectos */
+.projectGallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    padding: 50px 10%;
+    background: #fff;
+}
+
+.projectItem {
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.projectItem img {
+    width: 100%;
+    height: auto;
+}
+
+.projectItem h3 {
+    font-size: 20px;
+    color: #222;
+    margin-top: 15px;
+}
+
+.projectItem p {
+    font-size: 14px;
+    color: #555;
+    padding: 0 10px 20px;
+}
+
+/* Footer */
+.footer {
+    background: #222;
+    color: white;
+    text-align: center;
+    padding: 30px 10%;
+}
+
+.footer p {
+    font-size: 18px;
+}
+
+.contactBtn {
+    background-color: #007bff;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.contactBtn:hover {
+    background-color: #0056b3;
+}
+
+/* .forma2{
+} */

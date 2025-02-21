@@ -87,9 +87,9 @@ useEffect(() => {
     " ",
     "Back-end",
     "Front-end",
-    "Data analytics",
-    "Data science",
-    "IA"
+    // "Data analytics",
+    // "Data science",
+    "Databases"
     // "by @GevStack"
   ];
 
@@ -140,7 +140,12 @@ useEffect(() => {
           </div>
         </div>
         <div className='banner2' onClick={goAboutMePage}>
-          Sobre Me
+          <h1 id="animated-text">Acerca de mi</h1>
+          <img 
+            src="assets/me.png" 
+            alt="Mi foto" 
+            className="mi-foto"
+          />
         </div>
       </div>
       <div 

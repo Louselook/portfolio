@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
+import { useNavigate } from 'react-router-dom';
 import 'swiper/css';
 import 'swiper/css/effect-coverflow';
 import 'swiper/css/pagination';
@@ -9,8 +10,8 @@ import './index.css';
 
 import { Swiper as SwiperCore, EffectCoverflow, Pagination, Navigation, Autoplay } from 'swiper';
 
-import slide_image_1 from '../../../assets/proyectsImage/img_1.jpg';
-import slide_image_2 from '../../../assets/proyectsImage/img_2.jpg';
+import slide_image_1 from '../../../assets/proyectsImage/proyects/Consulta GPT Excel/main.png';
+import slide_image_2 from '../../../assets/proyectsImage/proyects/Creacion Informes GPT/main.png';
 import slide_image_3 from '../../../assets/proyectsImage/img_3.jpg';
 import slide_image_4 from '../../../assets/proyectsImage/img_4.jpg';
 import slide_image_5 from '../../../assets/proyectsImage/img_5.jpg';
@@ -22,7 +23,16 @@ import slide_image_hover from '../../../assets/proyectsImage/hoverView.png';
 SwiperCore.use([EffectCoverflow, Pagination, Navigation, Autoplay]);
 
 const CarouselProyects = () => {
+  const navigate = useNavigate();
   const swiperRef = useRef(null);
+
+  const goConsultaGptExcel = () => {
+    navigate('/consultaGptExcel');
+  };
+
+  const goCreacionInformesGpt = () => {
+    navigate('/creacionInformesGpt');
+  };
 
   const handleMouseEnter = () => {
     swiperRef.current.swiper.autoplay.stop();
@@ -55,6 +65,7 @@ const CarouselProyects = () => {
           stretch: 0,
           depth: 100,
           modifier: 2,
+          slideShadows: false,
         }}
         pagination={{ el: '.swiper-pagination', clickable: true }}
         navigation={{
@@ -64,42 +75,54 @@ const CarouselProyects = () => {
         }}
         className="swiper"
       >
+        {/* Consulta GPT Excel */}
         <SwiperSlide>
-          <article>
+          <article onClick={goConsultaGptExcel} style={{ cursor: 'pointer' }}>
             <img src={slide_image_1} alt="slide_image" />
-            <img src={slide_image_hover} alt="slide_image_hover" />
+            <img src= "assets/studies/python.png" alt="slide_image_hover" className='hover-img' />
           </article>
         </SwiperSlide>
+
+        {/* Creacion Informes GPT */}
         <SwiperSlide>
-          <article>
+          <article onClick={goCreacionInformesGpt} style={{ cursor: 'pointer' }}>
             <img src={slide_image_2} alt="slide_image" />
-            <img src={slide_image_hover} alt="slide_image_hover" />
+            <img src="assets/studies/python.png" alt="slide_image_hover" />
           </article>
         </SwiperSlide>
+
+        {/* App movil psicologia */}
         <SwiperSlide>
           <article>
             <img src={slide_image_3} alt="slide_image" />
             <img src={slide_image_hover} alt="slide_image_hover" />
           </article>
         </SwiperSlide>
+
+        {/* App movil restaurantes */}
         <SwiperSlide>
           <article>
             <img src={slide_image_4} alt="slide_image" />
             <img src={slide_image_hover} alt="slide_image_hover" />
           </article>
         </SwiperSlide>
+
+        {/* E-commers */}
         <SwiperSlide>
           <article>
             <img src={slide_image_5} alt="slide_image" />
             <img src={slide_image_hover} alt="slide_image_hover" />
           </article>
         </SwiperSlide>
+
+        {/* App de apuestas */}
         <SwiperSlide>
           <article>
             <img src={slide_image_6} alt="slide_image" />
             <img src={slide_image_hover} alt="slide_image_hover" />
           </article>
         </SwiperSlide>
+
         <SwiperSlide>
           <article>
             <img src={slide_image_7} alt="slide_image" />

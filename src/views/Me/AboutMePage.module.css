@@ -1,0 +1,122 @@
+.back {
+    position:absolute;
+    top: 10px;
+    left: 20px;
+    z-index: 100;
+    background-color: #007bff;
+    color: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); /* Sombra para resaltar */
+    transition: transform 0.3s ease, background-color 0.3s ease;
+    text-decoration: none;
+    padding: 0 10px;
+}
+  
+.back:hover {
+    background-color: #0056b3; /* Cambia el color al pasar el mouse */
+    transform: scale(1.1); /* Amplía ligeramente al pasar el mouse */
+}
+  
+.back:active {
+    transform: scale(0.9); /* Reduce ligeramente al hacer clic */
+}
+  
+.back-arrow {
+    font-size: 24px;
+}
+  
+
+/* Contenido */
+.content{
+    padding: 10px;
+}
+
+.presentation{
+    display: flex;
+    justify-content: space-around;
+    padding: 20px;
+    border-radius: 20px;
+    background-image: linear-gradient(-20deg, skyblue 40%,whitesmoke, whitesmoke);
+}
+
+.study {
+    max-width: 710px; /* Limitar el ancho máximo */
+    margin: 0 auto;
+    display: flex; 
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+}
+
+.contact-button {
+    font-size: 16px;
+    color: white;
+    background-color: #007bff; 
+    border: none;
+    border-radius: 10px;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    cursor: pointer;
+    padding: 5px 15px;
+}
+
+.contact-button:hover {
+    background-color: #0056b3;
+    transform: scale(1.1);
+}
+
+.contact-button:active {
+    transform: scale(0.9);
+}
+
+
+.studyCard {
+    display: flex;
+    background-color: var(----blanco-principal-bg);
+    box-shadow: 0px 8px 15px rgba(0, 0, 0, 0.2);
+    padding: 5px;
+    border-radius: 10px;
+    width: 220px;
+    align-items: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.studyCard:hover {
+    transform: scale(1.05);
+    box-shadow: 0px 8px 15px rgba(0, 0, 0, 0.2); 
+    background-color: var(--blanco-principal-bg-hover);
+    cursor: pointer;
+}
+
+.study-content {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+}
+
+.text-Title{
+    margin: 0;
+}
+
+.text-Subtitle{
+    margin: 0;
+    font-size: 10px;
+}
+
+.icon-studies{
+    height: 100px;
+}
+
+.info-studyCard{
+    width: 150px;
+    height: 50%;
+}
+
+
+
+@media (max-width: 600px ){
+    .mi-foto{
+        width: 160px;
+    }
+} 

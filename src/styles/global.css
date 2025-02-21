@@ -1,15 +1,46 @@
 body {
-    background-color: whitesmoke;
-    margin: 0;
-    padding: 0;
-    overflow-x: hidden; /* Esto evita el scroll horizontal */
+  background-color: whitesmoke;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden; /* Esto evita el scroll horizontal */
 }
 
 /* Colores Globales */
 :root {
-    --oscuro-principal-bg: rgb(6, 6, 34);
-    --oscuro-principal-text: black;
-    --blanco-principal-bg: whitesmoke;
-    /* Puedes añadir más variables aquí */
+  --oscuro-principal-bg: rgb(6, 6, 34);
+  --oscuro-principal-text: black;
+  --blanco-principal-bg: whitesmoke;
+  --blanco-principal-bg-hover: rgb(255, 255, 255);
+  /* Puedes añadir más variables aquí */
+}
+
+
+/* 
+:root {
+  --azulApp: #1f4b8f;
+  --amarilloApp: #f4d03f;
+  --tablets: 1157px; 
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--fondo);
+  box-sizing: border-box;
+  font-family: 'Arial', sans-serif;
+  font-size: 12px;
+  text-align: justify;
+}
+
+@media (max-width: 780px ){
+  body{
+    font-size: 10px;
   }
-  
+} */
+
+
+/* global.css */
+.row {
+  display: flex;
+  flex-direction: row;
+}
