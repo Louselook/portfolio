@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
 import 'swiper/css';
 import 'swiper/css/effect-coverflow';
 import 'swiper/css/pagination';
@@ -20,19 +20,13 @@ import slide_image_7 from '../../../assets/proyectsImage/img_7.jpg';
 
 import slide_image_hover from '../../../assets/proyectsImage/hoverView.png';
 
+import { goConsultaGptExcel, goCreacionInformesGpt, goAppApuestas } from "./navegar_proyectos";
+
 SwiperCore.use([EffectCoverflow, Pagination, Navigation, Autoplay]);
 
 const CarouselProyects = () => {
-  const navigate = useNavigate();
   const swiperRef = useRef(null);
-
-  const goConsultaGptExcel = () => {
-    navigate('/consultaGptExcel');
-  };
-
-  const goCreacionInformesGpt = () => {
-    navigate('/creacionInformesGpt');
-  };
+  const navigate = useNavigate();
 
   const handleMouseEnter = () => {
     swiperRef.current.swiper.autoplay.stop();
@@ -77,7 +71,7 @@ const CarouselProyects = () => {
       >
         {/* Consulta GPT Excel */}
         <SwiperSlide>
-          <article onClick={goConsultaGptExcel} style={{ cursor: 'pointer' }}>
+        <article onClick={() => goConsultaGptExcel(navigate)} style={{ cursor: 'pointer' }}>
             <img src={slide_image_1} alt="slide_image" />
             <img src= "assets/studies/python.png" alt="slide_image_hover" className='hover-img' />
           </article>
@@ -85,17 +79,17 @@ const CarouselProyects = () => {
 
         {/* Creacion Informes GPT */}
         <SwiperSlide>
-          <article onClick={goCreacionInformesGpt} style={{ cursor: 'pointer' }}>
+        <article onClick={() => goCreacionInformesGpt(navigate)} style={{ cursor: 'pointer' }}>
             <img src={slide_image_2} alt="slide_image" />
             <img src="assets/studies/python.png" alt="slide_image_hover" />
           </article>
         </SwiperSlide>
 
-        {/* App movil psicologia */}
+        {/* App de apuestas */}
         <SwiperSlide>
-          <article>
+          <article  onClick={() => goAppApuestas(navigate)} style={{ cursor: 'pointer' }}>
             <img src={slide_image_3} alt="slide_image" />
-            <img src={slide_image_hover} alt="slide_image_hover" />
+            <img src="assets/studies/flutter.png" alt="slide_image_hover" />
           </article>
         </SwiperSlide>
 
@@ -115,7 +109,7 @@ const CarouselProyects = () => {
           </article>
         </SwiperSlide>
 
-        {/* App de apuestas */}
+        {/* App movil psicologia */}
         <SwiperSlide>
           <article>
             <img src={slide_image_6} alt="slide_image" />

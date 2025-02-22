@@ -1,0 +1,97 @@
+.back {
+    position:absolute;
+    top: 10px;
+    left: 20px;
+    z-index: 100;
+    background-color: #f1c40f;
+    color: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); /* Sombra para resaltar */
+    transition: transform 0.3s ease, background-color 0.3s ease;
+    text-decoration: none;
+    padding: 0 10px;
+}
+  
+.back:hover {
+    background-color: #d4ac0d; /* Cambia el color al pasar el mouse */
+    transform: scale(1.1); /* Amplía ligeramente al pasar el mouse */
+}
+  
+.back:active {
+    transform: scale(0.9); /* Reduce ligeramente al hacer clic */
+}
+  
+.back-arrow {
+    font-size: 24px;
+}
+
+  
+  /* Contenedor principal para texto y figura */
+  .container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    margin-top: 30px;
+    justify-content: center;
+    gap: 100px;
+    padding: 10px;
+  }
+  
+  /* Sección Izquierda (donde irá el bloque de texto) */
+  .leftSection {
+    /* flex: 1; */
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    /* Ajusta si quieres centrar verticalmente */
+  }
+  
+  /* Sección Derecha (donde va la figura con el teléfono) */
+  .rightSection {
+    /* flex: 1; */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  /* La figura con las curvas (usando tu máscara) */
+  .figura {
+    --r: 20px; /* radio */
+    --s: 40px; /* tamaño de la curva interior */
+    --x: 20px; /* offset horizontal */
+    --y: 80px; /* offset vertical */
+      
+    width: 400px; /* ajusta según prefieras */
+    aspect-ratio: 1;
+    
+    
+    /* Gradiente en tonos amarillos */
+    background: linear-gradient(#fdd741, #f1e3ad );
+    border-radius: var(--r);
+  
+    /* Propiedades de la máscara que ya tenías */
+    --_m:/calc(2*var(--r)) calc(2*var(--r)) radial-gradient(#000 70%,#0000 72%);
+    --_g:conic-gradient(from 90deg at calc(100% - var(--r)) calc(100% - var(--r)),#0000 25%,#000 0);
+    --_d:(var(--s) + var(--r));
+    mask:
+      calc(100% - var(--_d) - var(--x)) 100% var(--_m),
+      100% calc(100% - var(--_d) - var(--y)) var(--_m),
+      radial-gradient(var(--s) at 100% 100%,#0000 99%,#000 calc(100% + 1px)) 
+       calc(-1*var(--r) - var(--x)) calc(-1*var(--r) - var(--y)),
+      var(--_g) calc(-1*var(--_d) - var(--x)) 0,
+      var(--_g) 0 calc(-1*var(--_d) - var(--y));
+    mask-repeat: no-repeat;
+  
+    position: relative; /* para posicionar el img de forma absoluta */
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2); /* sombra */
+  }
+  
+/* La imagen, que ahora ya no está recortada por la máscara */
+.phoneImage {
+    position: absolute;
+    top: 27%;
+    /* left: 0; */
+    transform: translate(-30%, -30%); /* Mueve la imagen más a la izquierda */
+    height: 450px;
+    width: auto;
+}
