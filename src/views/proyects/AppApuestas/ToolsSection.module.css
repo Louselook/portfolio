@@ -1,0 +1,77 @@
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+    padding: 20px;
+}
+  
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: #f8f8f8;
+  border-radius: 8px;
+  padding: 20px;
+  min-width: 150px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease-in-out, background-color 0.3s ease-in-out;
+  position: relative; /* Asegura que el z-index funcione */
+}
+
+/* Estado inicial combinando translate y scale(1) */
+.card:nth-child(odd) {
+  transform: translateY(-10px) scale(1);
+}
+
+.card:nth-child(even) {
+  transform: translateY(10px) scale(1);
+}
+
+/* Hover para elementos impares: combinamos translate y scale(1.2) */
+.card:nth-child(odd):hover {
+  transform: translateY(-10px) scale(1.1);
+  background-color: #f1c40fbb;
+  z-index: 10;
+}
+
+/* Hover para elementos pares: combinamos translate y scale(1.2) */
+.card:nth-child(even):hover {
+  transform: translateY(10px) scale(1.1);
+  background-color: #f1c40fbb;
+  z-index: 10;
+}
+
+
+  
+.iconContainer {
+    margin-bottom: 10px;
+}
+  
+  /* Ajusta el tamaño y estilo de la imagen según necesites */
+.iconImage {
+    width: 50px;
+    height: 50px;
+}
+  
+.value {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #333;
+}
+  
+.label {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #666;
+}
+  
+.card:nth-child(odd) {
+  transform: translateY(-10px);
+}
+
+.card:nth-child(even) {
+  transform: translateY(10px);
+}

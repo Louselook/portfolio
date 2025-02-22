@@ -27,7 +27,7 @@
 
   
   /* Contenedor principal para texto y figura */
-  .container {
+  .container1 {
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -35,6 +35,7 @@
     justify-content: center;
     gap: 100px;
     padding: 10px;
+    margin-bottom: 50px;
   }
   
   /* Sección Izquierda (donde irá el bloque de texto) */
