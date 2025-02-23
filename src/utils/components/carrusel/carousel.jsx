@@ -12,7 +12,7 @@ import { Swiper as SwiperCore, EffectCoverflow, Pagination, Navigation, Autoplay
 
 import slide_image_1 from '../../../assets/proyectsImage/proyects/Consulta GPT Excel/main.png';
 import slide_image_2 from '../../../assets/proyectsImage/proyects/Creacion Informes GPT/main.png';
-import slide_image_3 from '../../../assets/proyectsImage/img_3.jpg';
+import slide_image_3 from '../../../assets/proyectsImage/proyects/App Apuestas Mobile/main.png';
 import slide_image_4 from '../../../assets/proyectsImage/img_4.jpg';
 import slide_image_5 from '../../../assets/proyectsImage/img_5.jpg';
 import slide_image_6 from '../../../assets/proyectsImage/img_6.jpg';
@@ -93,6 +93,7 @@ const CarouselProyects = () => {
           </article>
         </SwiperSlide>
 
+        
         {/* App movil restaurantes */}
         <SwiperSlide>
           <article>

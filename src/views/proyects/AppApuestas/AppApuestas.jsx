@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import styles from './AppApuestas.module.css';
 import TitleBlock from './TitleBlock';
@@ -6,6 +6,12 @@ import phoneImage from './phone.png'; // Ruta de ejemplo
 import ToolsSection from "./ToolsSection";
 
 const AppApuestas = () => {
+
+  // Desplazar hacia arriba al cargar la página
+  useEffect(() => {
+      window.scrollTo(0, 0); // Lleva el scroll al inicio de la página
+  }, []);
+  
   return (
     <>
       {/* Botón para volver */}
@@ -34,6 +40,56 @@ const AppApuestas = () => {
         </div>
       </div>
       <ToolsSection />
+
+    {/* Sección nueva estilo "Take control of your money" */}
+    <div className={styles.container2}>
+      {/* Columna de imagen */}
+      <div className={styles.imageSection}>
+        {/* Círculo de fondo */}
+        <div className={styles.circle}></div>
+        {/* Imagen del teléfono */}
+        <img
+          src={phoneImage} 
+          alt="Imagen Teléfono"
+          className={styles.phoneImage2}
+        />
+      </div>
+      {/* Columna de texto */}
+      <div className={styles.textSection}>
+        <h1 className={styles.mainTitle}>Toma el control de tu dinero</h1>
+        <h2 className={styles.subTitle}>Finanzas al alcance de tu mano</h2>
+        <ul className={styles.benefitsList}>
+          <li>Monitoreo fácil con una sola vista de todas tus finanzas</li>
+          <li>Retiros con un solo clic</li>
+          <li>Recordatorios de recompensas premium</li>
+        </ul>
+      </div>
+    </div>
+
+    {/* Sección nueva estilo "Take control of your money" */}
+    <div className={styles.container2}>
+      {/* Columna de texto */}
+      <div className={styles.textSection}>
+        <h1 className={styles.mainTitle}>Toma el control de tu dinero</h1>
+        <h2 className={styles.subTitle}>Finanzas al alcance de tu mano</h2>
+        <ul className={styles.benefitsList}>
+          <li>Monitoreo fácil con una sola vista de todas tus finanzas</li>
+          <li>Retiros con un solo clic</li>
+          <li>Recordatorios de recompensas premium</li>
+        </ul>
+      </div>
+      {/* Columna de imagen */}
+      <div className={styles.imageSection}>
+        {/* Círculo de fondo */}
+        <div className={styles.circle}></div>
+        {/* Imagen del teléfono */}
+        <img
+          src={phoneImage} 
+          alt="Imagen Teléfono"
+          className={styles.phoneImage2}
+        />
+      </div>
+    </div>
     </>
   );
 };
