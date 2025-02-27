@@ -1,9 +1,11 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import styles from './AppApuestas.module.css';
-import TitleBlock from './TitleBlock';
-import phoneImage from './phone.png'; // Ruta de ejemplo
-import ToolsSection from "./ToolsSection";
+import TitleBlock from './components/TitleBlock';
+import ToolsSection from "./components/ToolsSection";
+import FuncCard from "./components/FuncCard";
+
+import phoneImage from "../../../assets/proyectsImage/proyects/App Apuestas Mobile/mobile.png";
 
 const AppApuestas = () => {
 
@@ -65,6 +67,10 @@ const AppApuestas = () => {
         </ul>
       </div>
     </div>
+
+    {/* Seccion de funcionalidades */}
+    
+    <FuncCard />
 
     {/* Sección nueva estilo "Take control of your money" */}
     <div className={styles.container2}>

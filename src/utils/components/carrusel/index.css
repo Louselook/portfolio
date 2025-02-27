@@ -17,7 +17,7 @@
 
 article {
   position: relative;
-  width: 100%;
+  width: 25rem;
   transition: all .3s ease;
 }
 
@@ -31,8 +31,8 @@ article img:first-child{
 
 article img:last-child {
   position: absolute;
-  width: 100%;
-  bottom: 0;
+  width: 25rem;
+  bottom: 50px;
   left: 0;
   right: 0;
   margin: auto;

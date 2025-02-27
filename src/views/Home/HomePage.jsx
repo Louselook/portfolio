@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {TextAnimation} from '../../utils/components/iconsTools/TextAnimation'
 import IconCarousel from '../../utils/components/iconsTools/IconsCarousel';
 import CarouselProyects from '../../utils/components/carrusel/carousel'
+import RandomGallery from '../Me/RandomGallery';
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -102,6 +103,14 @@ useEffect(() => {
     // "by @GevStack"
   ];
 
+  const images = [
+    "assets/me.png",
+    "assets/me2.png",
+    "assets/me3.png",
+    "assets/me4.png",
+    // Agrega más rutas de imágenes
+  ];
+
   return (
     <>
       <div className='contenedor1'>
@@ -141,11 +150,7 @@ useEffect(() => {
         </div>
         <div className='banner2' onClick={goAboutMePage}>
           <h1 id="animated-text">Acerca de mi</h1>
-          <img 
-            src="assets/me.png" 
-            alt="Mi foto" 
-            className="mi-foto"
-          />
+          <RandomGallery images={images} count={15} />
         </div>
       </div>
       <div 
