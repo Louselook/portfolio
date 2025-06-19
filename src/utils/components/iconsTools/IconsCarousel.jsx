@@ -22,13 +22,17 @@ const IconCarousel = () => {
   }, []);
 
   return (
-    // <div className='carousel-container '>
+    <div className='carousel-container'>
       <TransitionGroup>
         <CSSTransition key={index} timeout={3500} classNames="slide">
-          <img src={images[index]} alt={`Slide ${index}`} className="carousel-image" />
+          <img 
+            src={images[index]} 
+            alt={`Technology ${index + 1}`} 
+            className="carousel-image"
+          />
         </CSSTransition>
       </TransitionGroup>
-    // </div>
+    </div>
   );
 };
 

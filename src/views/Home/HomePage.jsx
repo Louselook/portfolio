@@ -11,6 +11,7 @@ const HomePage = () => {
   const [showIntroduction, setShowIntroduction] = useState(false);
   const [showTextAnimation, setShowTextAnimation] = useState(false);
   const contenedorRef = useRef(null);
+  const proyectsViewsRef = useRef(null); // Nueva referencia para el contenedor de proyectos
 
   const goAboutMePage = () => {
     navigate('/about');
@@ -33,65 +34,71 @@ const HomePage = () => {
     });
 
     // Detecta el final de la animación del título y muestra el párrafo
-    const titleAnimationDuration = text.length * 260; // Duración total de la animación del título
+    const titleAnimationDuration = text.length * 260;
     setTimeout(() => {
         setShowIntroduction(true);
     }, titleAnimationDuration);
 
-        // Esperar 5 segundos antes de mostrar TextAnimation
-        setTimeout(() => {
-          setShowTextAnimation(true);
-      }, 2500);
+    // Esperar 2.5 segundos antes de mostrar TextAnimation
+    setTimeout(() => {
+        setShowTextAnimation(true);
+    }, 2500);
 
-      return () => {
+    return () => {
         // Limpiar los efectos y animaciones aquí si es necesario
-      };
-}, []);
+    };
+  }, []);
 
-useEffect(() => {
-  const observer = new IntersectionObserver(
-    (entries) => {
-      entries.forEach(entry => {
-        const proyectsViewsElement = document.querySelector('.proyectsViews');
-        const proyecTitleElement = document.querySelector('#proyecTitle-text');
-        if (entry.isIntersecting && entry.intersectionRatio === 1) {
-          console.log("Elemento visible");
-          proyectsViewsElement.style.backgroundColor = 'rgb(6, 6, 34)';
-          proyecTitleElement.style.color = 'whitesmoke'
-        } else {
-          console.log("Elemento No visible");
-          proyectsViewsElement.style.backgroundColor = 'whitesmoke';
-          proyecTitleElement.style.color = 'rgb(6, 6, 34)'
-        }
-      });
-    },
-    {
-      threshold: 1.0 // 1.0 significa que el 100% del elemento debe estar visible
-    }
-  );
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          const proyectsViewsElement = proyectsViewsRef.current;
+          const proyecTitleElement = document.querySelector('#proyecTitle-text');
+          
+          if (entry.isIntersecting) {
+            console.log("Sección de proyectos visible");
+            if (proyectsViewsElement) {
+              proyectsViewsElement.style.backgroundColor = 'rgb(6, 6, 34)';
+            }
+            if (proyecTitleElement) {
+              proyecTitleElement.style.color = 'whitesmoke';
+            }
+          } else {
+            console.log("Sección de proyectos no visible");
+            if (proyectsViewsElement) {
+              proyectsViewsElement.style.backgroundColor = 'whitesmoke';
+            }
+            if (proyecTitleElement) {
+              proyecTitleElement.style.color = 'rgb(6, 6, 34)';
+            }
+          }
+        });
+      },
+      {
+        threshold: 0.5, // Cambiado a 50% para mejor detección
+        rootMargin: '0px 0px -20% 0px' // Activa cuando el elemento está 20% antes del final del viewport
+      }
+    );
 
-  const currentRef = contenedorRef.current; // Almacena la referencia actual en una variable local
+    const currentRef = proyectsViewsRef.current; // Observa directamente el contenedor de proyectos
 
-  if (currentRef) {
-    observer.observe(currentRef);
-  }
-
-  return () => {
     if (currentRef) {
-      observer.unobserve(currentRef);
+      observer.observe(currentRef);
     }
-  };
-}, []); // Asegúrate de pasar un arreglo vacío como segundo argumento para que el efecto se ejecute solo una vez
 
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, []);
 
   const texts = [
     " ",
     "Back-end",
     "Front-end",
-    // "Data analytics",
-    // "Data science",
     "Databases"
-    // "by @GevStack"
   ];
 
   const texts2 = [
@@ -100,7 +107,6 @@ useEffect(() => {
     "Data analytics",
     "Data science",
     "IA"
-    // "by @GevStack"
   ];
 
   const images = [
@@ -108,7 +114,6 @@ useEffect(() => {
     "assets/me2.png",
     "assets/me3.png",
     "assets/me4.png",
-    // Agrega más rutas de imágenes
   ];
 
   return (
@@ -118,10 +123,6 @@ useEffect(() => {
           <div className='element1banner1'>
             <h1 id="animated-text">Portfolio</h1>
             <p className={`introduccion ${showIntroduction ? 'visible' : ''}`}>
-              {/* Una exposición de los trabajos que he realizado, 
-              proyectos personales en los que he trabajado, 
-              y mis estudios académicos. Explora 
-              para conocer más sobre mi experiencia y habilidades. */}
               An exhibition of the work I have done,
               personal projects I have worked on,
               and my academic studies. Explore
@@ -139,7 +140,7 @@ useEffect(() => {
             <div className='sub2ElementBanner1'>
               <h1>
                 {showTextAnimation ? (
-                  <TextAnimation texts={texts}  texts2={texts2}/>
+                  <TextAnimation texts={texts} texts2={texts2}/>
                 ) : (
                   <span id="text1"></span>
                 )}
@@ -153,24 +154,20 @@ useEffect(() => {
           <RandomGallery images={images} count={15} />
         </div>
       </div>
-      <div 
-        className='contenedor2'>
-        <div className='proyectsViews'>
-          <div className='banner1' >
-            <div className='proyecTitlebanner'>
-              <h1 id="proyecTitle-text">
-                {/* COLECCION DE PROYECTOS PERSONALES */}
-                COLLECTION OF PERSONAL PROJECTS.
-              </h1>
-            </div>
+      
+      <div className='contenedor2'>
+        <div className='proyectsViews' ref={proyectsViewsRef}>
+          <div className='proyecTitlebanner'>
+            <h1 id="proyecTitle-text">
+              COLLECTION OF PROJECTS.
+            </h1>
           </div>         
-          <div className='proyectsCarrucel'  >
+          <div className='proyectsCarrucel'>
             <CarouselProyects />
           </div>
         </div>
         <div className='viewElement' ref={contenedorRef}></div>
       </div>
-      
     </>
   );
 }

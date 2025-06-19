@@ -121,62 +121,6 @@
   transform: translateY(0);
 }
 
-/* Controles del slider */
-.slider-controler {
-  position: relative;
-  bottom: 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 2rem;
-  margin-top: 2rem;
-}
-
-.slider-arrow {
-  background: rgba(255, 255, 255, 0.2);
-  width: 3rem;
-  height: 3rem;
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: white;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
-  border: 2px solid rgba(255, 255, 255, 0.3);
-}
-
-.slider-arrow:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: scale(1.1);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-}
-
-.slider-arrow ion-icon {
-  font-size: 1.2rem;
-}
-
-/* Estilos de paginación */
-.swiper-pagination {
-  position: relative;
-  margin-top: 1rem;
-}
-
-.swiper-pagination-bullet {
-  width: 12px;
-  height: 12px;
-  background: rgba(255, 255, 255, 0.5);
-  opacity: 1;
-  transition: all 0.3s ease;
-}
-
-.swiper-pagination-bullet-active {
-  background: white;
-  transform: scale(1.2);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-
 /* Responsive Design */
 @media (max-width: 1200px) {
   .swiper-slide {
@@ -222,15 +166,6 @@
     height: 40%;
     padding: 0.5rem;
   }
-  
-  .slider-arrow {
-    width: 2.5rem;
-    height: 2.5rem;
-  }
-  
-  .slider-arrow ion-icon {
-    font-size: 1rem;
-  }
 }
 
 @media (max-width: 480px) {
@@ -250,10 +185,6 @@
   .hover-image {
     width: 35%;
     height: 35%;
-  }
-  
-  .slider-controler {
-    gap: 1rem;
   }
 }
 

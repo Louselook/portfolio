@@ -2,7 +2,7 @@
 
 /* Contenedor principal */
 .contenedor1 {
-    min-height: 100vh;
+    height: 100vh; /* Cambiado de min-height a height fijo */
     width: 100vw;
     display: flex;
     justify-content: space-between;
@@ -12,7 +12,7 @@
 }
 
 .banner1 {
-    display: flex;
+    display: flex;  
     flex-direction: column;
     justify-content: space-between;
     align-items: center;
@@ -118,6 +118,7 @@
     border-radius: 20px;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     position: relative;
+    aspect-ratio: 1 / 1;
 }
 
 .sub1ElementBanner1:hover {
@@ -181,23 +182,29 @@
     text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.5);
 }
 
-/* Contenedor 2 */
+/* Contenedor 2 - CAMBIOS PRINCIPALES AQUÍ */
 .contenedor2 {
-    min-height: 100vh;
+    height: 100vh; /* Altura fija igual al viewport */
     width: 100vw;
+    display: flex;
+    flex-direction: column;
 }
 
 .proyectsViews {
     width: 100%;
-    min-height: 100vh;
+    height: 100vh; /* Altura completa del viewport */
     transition: background-color 0.3s ease-out;
     padding: 20px;
     box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* Centra el contenido verticalmente */
 }
 
 .proyecTitlebanner {
     padding: 30px 0;
     text-align: center;
+    flex-shrink: 0; /* No se encoge */
 }
 
 #proyecTitle-text {
@@ -209,8 +216,20 @@
 }
 
 .proyectsCarrucel {
+    flex: 1; /* Toma el espacio restante */
     margin: 0 20px;
     position: relative;
+    display: flex;
+    align-items: center; /* Centra el carrusel verticalmente */
+}
+
+/* Elemento invisible para el observer - ahora más grande */
+.viewElement {
+    height: 1px;
+    width: 100%;
+    position: absolute;
+    bottom: 0;
+    left: 0;
 }
 
 /* Responsive Design */
@@ -218,6 +237,7 @@
     .contenedor1 {
         flex-direction: column;
         height: auto;
+        min-height: 100vh; /* Permite crecimiento en móviles */
         gap: 20px;
     }
     
@@ -233,12 +253,23 @@
     .sub2ElementBanner1 {
         padding: 15px;
     }
+    
+    .contenedor2 {
+        height: auto;
+        min-height: 100vh;
+    }
+    
+    .proyectsViews {
+        height: auto;
+        min-height: 100vh;
+    }
 }
 
 @media (max-width: 768px) {
     .contenedor1 {
         padding: 15px;
         gap: 15px;
+        height: auto;
     }
     
     .element1banner1 {
