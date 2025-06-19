@@ -1,10 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@700&display=swap'); /* Ejemplo de importación de una fuente de Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
 
-.contenedor1{
-    height: 100vh;
+/* Contenedor principal */
+.contenedor1 {
+    min-height: 100vh;
     width: 100vw;
     display: flex;
     justify-content: space-between;
+    gap: 20px;
+    padding: 20px;
+    box-sizing: border-box;
 }
 
 .banner1 {
@@ -13,70 +17,65 @@
     justify-content: space-between;
     align-items: center;
     width: 50%;
-    padding: 10px;
-    margin-left: 20px;
+    min-width: 300px;
 }
 
 .element1banner1 {
     background-color: var(--blanco-principal-bg);
     border-radius: 20px;
     height: 50%;
+    min-height: 300px;
     width: 100%;
     margin-bottom: 20px;
-
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    /* overflow: hidden; */
-    /* Incluir el padding en el tamaño total */
     box-sizing: border-box;
-    padding: 50px;
+    padding: clamp(20px, 5vw, 50px);
     overflow: hidden;
-    transition: background-color 0.3s;
+    transition: background-color 0.3s ease;
 }
 
 .element1banner1:hover .letter {
-    -webkit-text-stroke: 2px var(--blanco-principal-bg);; /* Cambiar color del borde en hover */
+    -webkit-text-stroke: 2px var(--blanco-principal-bg);
 }
+
 .element1banner1:hover .introduccion {
     color: var(--blanco-principal-bg);
 }
+
 .element1banner1:hover {
-    background-color: var(--oscuro-principal-bg); /* Cambiar color de fondo en hover */
+    background-color: var(--oscuro-principal-bg);
 }
 
 #animated-text {
     display: flex;
     justify-content: center;
-    font-family: 'Poppins', sans-serif; 
-    /* "Constantia", serif */
-    font-size: 2vw;
+    font-family: 'Poppins', sans-serif;
+    font-size: clamp(1.5rem, 4vw, 3rem);
+    margin-bottom: 1rem;
 }
 
 .letter {
     opacity: 0;
-    font-size: 2em;
-    margin: 0 5px;
-    /* color: var(--blanco-principal-bg);; */
+    font-size: 1em;
+    margin: 0 2px;
     color: transparent;
-    /* Hacer las letras blancas huecas */
     -webkit-text-stroke: 2px black;
-     /* Opcional: Para hacer todas las letras mayúsculas */
     text-transform: uppercase;
     transition: -webkit-text-stroke 0.3s, color 0.3s;
 }
 
-  
 @keyframes fall {
     0% { transform: translateY(-100vh); opacity: 0; }
     100% { transform: translateY(0); opacity: 1; }
 }
-  
+
 @keyframes roll {
     0% { transform: translateX(-100vw) rotate(-360deg); opacity: 0; }
     100% { transform: translateX(0) rotate(0); opacity: 1; }
 }
-  
+
 @keyframes bounce {
     0% { transform: translateY(-100vh); opacity: 0; }
     50% { transform: translateY(20px); }
@@ -85,126 +84,260 @@
 
 .introduccion {
     color: var(--oscuro-principal-text);
-    font-family: sans-serif;
-    font-size: 1vw; /* Ajusta el tamaño de la fuente */
-    text-align: justify; /* Justifica el texto */
-    line-height: 1.5; /* Ajusta la altura de la línea para mejorar la legibilidad */
-
-    opacity: 0; /* Comienza invisible */
-    transform: translateY(100%); /* Comienza desde abajo */
+    font-family: 'Poppins', sans-serif;
+    font-size: clamp(0.8rem, 2vw, 1.2rem);
+    text-align: justify;
+    line-height: 1.6;
+    opacity: 0;
+    transform: translateY(100%);
     transition: opacity 0.5s ease, transform 1s ease;
 }
 
 .introduccion.visible {
-    opacity: 1; /* Se vuelve visible */
-    transform: translateY(0); /* Se desplaza hacia arriba */
+    opacity: 1;
+    transform: translateY(0);
 }
-  
-/* // */
 
+/* Elemento 2 del banner 1 */
 .element2banner1 {
-    /* background-color: var(--oscuro-principal-bg); */
     border-radius: 20px;
     height: 50%;
+    min-height: 300px;
     width: 100%;
     display: flex;
     flex-direction: row;
     justify-content: space-between;
-    /* Incluir el padding en el tamaño total */
+    gap: 17px;
     box-sizing: border-box;
 }
 
-.sub1ElementBanner1{
+.sub1ElementBanner1 {
     background-color: var(--oscuro-principal-bg);
     height: 100%;
     width: 50%;
     border-radius: 20px;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
-    
     position: relative;
 }
+
 .sub1ElementBanner1:hover {
     transform: scale(1.03);
-    box-shadow: 0 4px 8px var(--oscuro-principal-bg);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
 }
 
-.sub2ElementBanner1{
+.sub2ElementBanner1 {
     background-color: var(--oscuro-principal-bg);
     height: 100%;
     width: 50%;
     border-radius: 20px;
-    margin-left: 17px;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
-
     filter: blur(0.4px);
-    /* Estilos flexbox para centrar el contenido */
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
-}
-
-@import url("https://fonts.googleapis.com/css?family=Raleway:900&display=swap");
-#text1,
-#text2 {
-    font-size: 48pt;
+    padding: 20px;
+    box-sizing: border-box;
 }
 
 .sub2ElementBanner1:hover {
     transform: scale(1.03);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
 }
 
+.sub2ElementBanner1 h1 {
+    color: var(--blanco-principal-bg);
+    font-size: clamp(1rem, 3vw, 2rem);
+    margin: 0;
+}
 
+/* Banner 2 */
 .banner2 {
-    position: relative; /* Agregado */
+    position: relative;
     background-image: linear-gradient(-20deg, skyblue 40%, whitesmoke, whitesmoke);
     width: 50%;
-    margin: 10px;
-    margin-right: 20px;
+    min-width: 300px;
+    margin: 0;
     border-radius: 20px;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
-  }
-  
+    cursor: pointer;
+    overflow: hidden;
+}
 
 .banner2:hover {
     transform: scale(1.03);
-    box-shadow: 0 4px 8px rgba(88, 79, 79, 0.2);
-    background-image: linear-gradient(-20deg, rgba(77, 189, 233, 0.793) 40%,rgba(199, 197, 197, 0.714), rgba(245, 245, 245, 0.786) );
-
+    box-shadow: 0 8px 25px rgba(88, 79, 79, 0.3);
+    background-image: linear-gradient(-20deg, rgba(77, 189, 233, 0.793) 40%, rgba(199, 197, 197, 0.714), rgba(245, 245, 245, 0.786));
 }
 
-/* // */
-.element2banner1 h1{
-    color: var(--blanco-principal-bg);
-    padding: 20px;
+.banner2 #animated-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    color: var(--oscuro-principal-bg);
+    font-weight: 700;
+    text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.5);
 }
 
-
-/* // */
-.contenedor2{
-    height: 100vh;
+/* Contenedor 2 */
+.contenedor2 {
+    min-height: 100vh;
     width: 100vw;
 }
 
-.proyectsViews{
+.proyectsViews {
     width: 100%;
-    height: 100%;
+    min-height: 100vh;
     transition: background-color 0.3s ease-out;
+    padding: 20px;
+    box-sizing: border-box;
 }
 
 .proyecTitlebanner {
-    padding-top: 30px;
+    padding: 30px 0;
+    text-align: center;
 }
 
 #proyecTitle-text {
-    font-family: 'Poppins', sans-serif; 
-    font-size: 3.3vw;
+    font-family: 'Poppins', sans-serif;
+    font-size: clamp(1.5rem, 5vw, 4rem);
+    font-weight: 700;
     transition: color 0.3s ease-out;
+    margin: 0;
 }
 
-.proyectsCarrucel{
-    margin: 0 20px 0 20px;
-    /* border-radius: 20px; */
+.proyectsCarrucel {
+    margin: 0 20px;
+    position: relative;
 }
 
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .contenedor1 {
+        flex-direction: column;
+        height: auto;
+        gap: 20px;
+    }
+    
+    .banner1, .banner2 {
+        width: 100%;
+        min-height: 400px;
+    }
+    
+    .element1banner1, .element2banner1 {
+        min-height: 200px;
+    }
+    
+    .sub2ElementBanner1 {
+        padding: 15px;
+    }
+}
+
+@media (max-width: 768px) {
+    .contenedor1 {
+        padding: 15px;
+        gap: 15px;
+    }
+    
+    .element1banner1 {
+        padding: 20px;
+        min-height: 250px;
+    }
+    
+    .element2banner1 {
+        flex-direction: column;
+        gap: 15px;
+        min-height: 250px;
+    }
+    
+    .sub1ElementBanner1, .sub2ElementBanner1 {
+        width: 100%;
+        height: 50%;
+        min-height: 100px;
+    }
+    
+    .banner2 {
+        min-height: 300px;
+    }
+    
+    .proyectsViews {
+        padding: 15px;
+    }
+    
+    .proyecTitlebanner {
+        padding: 20px 0;
+    }
+    
+    .proyectsCarrucel {
+        margin: 0 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .contenedor1 {
+        padding: 10px;
+        gap: 10px;
+    }
+    
+    .element1banner1 {
+        padding: 15px;
+        min-height: 200px;
+        margin-bottom: 10px;
+    }
+    
+    .element2banner1 {
+        gap: 10px;
+        min-height: 200px;
+    }
+    
+    .sub1ElementBanner1, .sub2ElementBanner1 {
+        min-height: 80px;
+    }
+    
+    .banner2 {
+        min-height: 250px;
+    }
+    
+    .proyectsViews {
+        padding: 10px;
+    }
+    
+    .proyecTitlebanner {
+        padding: 15px 0;
+    }
+    
+    .proyectsCarrucel {
+        margin: 0 5px;
+    }
+    
+    .letter {
+        margin: 0 1px;
+    }
+}
+
+/* Mejoras adicionales de UX */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Mejoras de accesibilidad */
+.banner2:focus {
+    outline: 3px solid var(--oscuro-principal-bg);
+    outline-offset: 2px;
+}
+
+/* Transiciones suaves para todos los elementos interactivos */
+.element1banner1, .sub1ElementBanner1, .sub2ElementBanner1, .banner2 {
+    will-change: transform;
+}
+
+/* Optimización de rendimiento */
+.contenedor1, .contenedor2 {
+    contain: layout style paint;
+}

@@ -1,65 +1,299 @@
-
-.swiper-slide {
-  width: 25rem;
-  /* height: 25rem; */
-  /* position: relative; */
-}
- 
-.slider-controler .slider-arrow {
-  color: var(----blanco-principal-bg);
-}
-
-.swiper-pagination .swiper-pagination-bullet-active {
-  background: var(----blanco-principal-bg);
-}
-
-/* ///////////// */
-
-article {
+/* Contenedor principal del carrusel */
+.swiper_container {
+  width: 100%;
+  padding: 2rem 0;
   position: relative;
-  width: 25rem;
-  transition: all .3s ease;
 }
 
-article img:first-child{
-  box-shadow: 0 60px 60px -60px rgba(0, 30, 255, 0.5);
-  width: 25rem;
-  height: 25rem;
-  border-radius: 2rem;
+/* Configuración del Swiper */
+.swiper {
+  width: 100%;
+  padding-top: 2rem;
+  padding-bottom: 4rem;
+}
+
+/* Slides del carrusel */
+.swiper-slide {
+  background-position: center;
+  background-size: cover;
+  width: min(400px, 80vw);
+  height: min(400px, 80vw);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+/* Tarjeta del proyecto */
+.project-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 1.5rem;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Contenedor de imágenes */
+.image-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Imagen principal */
+.main-image {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+  transition: all 0.4s ease;
+  border-radius: 1.5rem;
 }
 
-article img:last-child {
+/* Imagen de hover (tecnología) */
+.hover-image {
   position: absolute;
-  width: 25rem;
-  bottom: 50px;
+  width: 50%;
+  height: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.8);
+  opacity: 0;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 1rem;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  object-fit: contain;
+}
+
+/* Información del proyecto */
+.project-info {
+  position: absolute;
+  bottom: 0;
   left: 0;
   right: 0;
-  margin: auto;
-  transform: translateY(25%);
-  transition: .3s ease;
-  opacity: 0;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+  color: white;
+  padding: 2rem 1.5rem 1.5rem;
+  transform: translateY(100%);
+  transition: all 0.4s ease;
 }
 
-article:hover {
+.project-title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  text-align: center;
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Efectos de hover */
+.project-card:hover {
+  /* mantenemos el desplazamiento y el escalado */
   transform: 
-    perspective(1100px) 
-    rotateX(10deg) 
-    translateY(-5px) 
-    translateZ(0);
+    perspective(1100px)      /* distancia del observador */
+    rotateX(10deg)           /* inclinación vertical */
+    /* si quieres, añade también rotateY para barrido lateral:
+       rotateY(5deg)       */
+    translateY(-5px)         /* elevación sobre el eje Y */
+    scale(1.05);             /* ligero aumento de tamaño */
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
 }
 
-article:hover::before{
+
+.project-card:hover .main-image {
+  filter: brightness(0.7) blur(2px);
+  transform: scale(1.1);
+}
+
+.project-card:hover .hover-image {
   opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
 }
 
-article:hover img:last-child {
+.project-card:hover .project-info {
+  transform: translateY(0);
+}
+
+/* Controles del slider */
+.slider-controler {
+  position: relative;
+  bottom: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.slider-arrow {
+  background: rgba(255, 255, 255, 0.2);
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.slider-arrow:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.slider-arrow ion-icon {
+  font-size: 1.2rem;
+}
+
+/* Estilos de paginación */
+.swiper-pagination {
+  position: relative;
+  margin-top: 1rem;
+}
+
+.swiper-pagination-bullet {
+  width: 12px;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.5);
   opacity: 1;
-  transform: translateY(10%) scale(0.6); /* scale(0.8) reduce el tamaño al 80% */
+  transition: all 0.3s ease;
 }
 
-.swiper-slide:hover .swiper-slide-shadow-left,
-.swiper-slide:hover .swiper-slide-shadow-right {
-  display: none;
+.swiper-pagination-bullet-active {
+  background: white;
+  transform: scale(1.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .swiper-slide {
+    width: min(350px, 75vw);
+    height: min(350px, 75vw);
+  }
+  
+  .project-title {
+    font-size: 1.1rem;
+  }
+  
+  .hover-image {
+    width: 45%;
+    height: 45%;
+  }
+}
+
+@media (max-width: 768px) {
+  .swiper_container {
+    padding: 1rem 0;
+  }
+  
+  .swiper {
+    padding-top: 1rem;
+    padding-bottom: 3rem;
+  }
+  
+  .swiper-slide {
+    width: min(300px, 85vw);
+    height: min(300px, 85vw);
+  }
+  
+  .project-card {
+    border-radius: 1rem;
+  }
+  
+  .project-title {
+    font-size: 1rem;
+  }
+  
+  .hover-image {
+    width: 40%;
+    height: 40%;
+    padding: 0.5rem;
+  }
+  
+  .slider-arrow {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  
+  .slider-arrow ion-icon {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .swiper-slide {
+    width: min(250px, 90vw);
+    height: min(250px, 90vw);
+  }
+  
+  .project-info {
+    padding: 1.5rem 1rem 1rem;
+  }
+  
+  .project-title {
+    font-size: 0.9rem;
+  }
+  
+  .hover-image {
+    width: 35%;
+    height: 35%;
+  }
+  
+  .slider-controler {
+    gap: 1rem;
+  }
+}
+
+/* Animaciones adicionales */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.swiper-slide-active .project-card {
+  animation: slideIn 0.6s ease-out;
+}
+
+/* Mejoras de accesibilidad */
+.project-card:focus {
+  outline: 3px solid #667eea;
+  outline-offset: 2px;
+}
+
+.project-card:focus-visible {
+  transform: translateY(-5px) scale(1.02);
+}
+
+/* Efectos especiales para el slide activo */
+.swiper-slide-active .project-card {
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25);
+}
+
+.swiper-slide-next .project-card,
+.swiper-slide-prev .project-card {
+  opacity: 0.8;
+}
+
+/* Transiciones suaves para el cambio de slides */
+.swiper-wrapper {
+  transition-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}

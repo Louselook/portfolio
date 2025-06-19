@@ -10,3 +10,7 @@ export const goCreacionInformesGpt = (navigate) => {
 export const goAppApuestas = (navigate) => {
     navigate('/appApuestasFlutter');
 };
+
+export const goAppGoalkeepers = (navigate) => {
+    navigate('/appGoalkeepersFlutter');
+};
