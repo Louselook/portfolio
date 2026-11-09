@@ -60,9 +60,14 @@ function withSoftMids(points) {
   for (let i = 1; i < points.length; i += 1) {
     const a = points[i - 1];
     const b = points[i];
+    // Two eased midpoints → gentler bends (less “broken stick” look)
     out.push({
-      x: a.x * 0.6 + b.x * 0.4,
-      y: a.y * 0.45 + b.y * 0.55,
+      x: a.x * 0.72 + b.x * 0.28,
+      y: a.y * 0.68 + b.y * 0.32,
+    });
+    out.push({
+      x: a.x * 0.35 + b.x * 0.65,
+      y: a.y * 0.38 + b.y * 0.62,
     });
     out.push(b);
   }
@@ -155,9 +160,11 @@ function MotionBlock({ children, className }) {
 function ScrollAtmosphere({ pageRef, refs, onProgress, expCount }) {
   const reduce = useReducedMotion();
   const pathRef = useRef(null);
-  const spineRef = useRef(null);
-  const taperGroupRef = useRef(null);
-  const tipHaloRef = useRef(null);
+  const canvasRef = useRef(null);
+  const particlesRef = useRef([]);
+  const progressRef = useRef(0);
+  const pointsCacheRef = useRef([]);
+  const tipPxRef = useRef({ x: 0, y: 0 });
   const [ribbonPath, setRibbonPath] = useState(() => fallbackPathFromOrigin({ x: 28, y: 180 }));
   const tipLeft = useMotionValue('28%');
   const tipTop = useMotionValue('15%');
@@ -213,7 +220,7 @@ function ScrollAtmosphere({ pageRef, refs, onProgress, expCount }) {
 
     const next =
       pts.length >= 2
-        ? catmullRomPath(withSoftMids(pts), 0.4)
+        ? catmullRomPath(withSoftMids(pts), 0.28)
         : fallbackPathFromOrigin(start || { x: 28, y: 180 });
 
     setRibbonPath((prev) => (prev === next ? prev : next));
@@ -248,83 +255,269 @@ function ScrollAtmosphere({ pageRef, refs, onProgress, expCount }) {
     [0.06, 0.2, 0.38, 0.58, 0.78]
   );
 
-  // Magic-wand trail: continuous 0→tip, thick+round at the light, thinner toward origin.
-  const SEGMENTS = 36;
-  const MIN_W = 0.55; // never vanishes
-  const MAX_W = 4.8; // round body near the tip
-  const MIN_OP = 0.28;
-  const MAX_OP = 0.95;
+  // Continuous wand trail (canvas) + spark particles — YouTube short style,
+  // permanent from origin → tip, brand orange.
+  const STEP_PX = 2.5;
+  const PARTICLE_CAP = 120;
 
   const orbY1 = useTransform(scrollYProgress, [0, 1], [0, 180]);
   const orbY2 = useTransform(scrollYProgress, [0, 1], [0, -140]);
   const orbY3 = useTransform(scrollYProgress, [0, 1], [40, 220]);
 
-  const updateComet = useCallback(
-    (progress) => {
+  const syncCanvasSize = useCallback(() => {
+    const page = pageRef.current;
+    const canvas = canvasRef.current;
+    if (!page || !canvas) return null;
+    const w = page.offsetWidth;
+    const h = page.offsetHeight;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    if (canvas.width !== Math.floor(w * dpr) || canvas.height !== Math.floor(h * dpr)) {
+      canvas.width = Math.floor(w * dpr);
+      canvas.height = Math.floor(h * dpr);
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
+    }
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { ctx, w, h };
+  }, [pageRef]);
+
+  const samplePath = useCallback(
+    (progress, w, h) => {
       const path = pathRef.current;
-      const taper = taperGroupRef.current;
-      if (!path || !ribbonPath || !taper) return;
+      if (!path || !ribbonPath) return null;
       try {
         const len = path.getTotalLength();
-        if (!len) return;
+        if (!len) return null;
         const t = clamp(progress, 0, 0.9999);
-        const tip = path.getPointAtLength(t * len);
-        tipLeft.set(`${tip.x}%`);
-        tipTop.set(`${(tip.y / VIEW_H) * 100}%`);
-        tipOpacity.set(progress < 0.002 ? 0.8 : 1);
+        const tipVB = path.getPointAtLength(t * len);
+        tipLeft.set(`${tipVB.x}%`);
+        tipTop.set(`${(tipVB.y / VIEW_H) * 100}%`);
+        tipOpacity.set(progress < 0.002 ? 0.85 : 1);
 
-        // Continuous spine origin → tip (unitless dash so it never looks cut off)
-        if (spineRef.current) {
-          const drawn = Math.max(t, 0.0015);
-          spineRef.current.setAttribute('stroke-dasharray', `${drawn} 1`);
-          spineRef.current.setAttribute('stroke-dashoffset', '0');
-          spineRef.current.setAttribute('opacity', t < 0.004 ? '0.35' : '0.75');
-        }
+        const toPx = (pt) => ({
+          x: (pt.x / 100) * w,
+          y: (pt.y / VIEW_H) * h,
+        });
 
-        // Tapered body: thin at origin → thick near tip (varita / estela)
-        let html = '';
-        if (t > 0.002) {
-          for (let i = 0; i < SEGMENTS; i += 1) {
-            const u0 = t * (i / SEGMENTS);
-            const u1 = t * ((i + 1) / SEGMENTS);
-            const p0 = path.getPointAtLength(u0 * len);
-            const p1 = path.getPointAtLength(u1 * len);
-            const ease = ((i + 1) / SEGMENTS) ** 1.85;
-            const w = MIN_W + (MAX_W - MIN_W) * ease;
-            const op = MIN_OP + (MAX_OP - MIN_OP) * ease;
-            html += `<path d="M ${p0.x.toFixed(2)} ${p0.y.toFixed(2)} L ${p1.x.toFixed(2)} ${p1.y.toFixed(2)}" stroke="#FF6A3D" stroke-width="${w.toFixed(2)}" stroke-linecap="round" opacity="${op.toFixed(2)}" fill="none"/>`;
-          }
+        const tip = toPx(tipVB);
+        // Walk the drawn portion to estimate CSS-pixel length for dense sampling
+        let approxPx = 0;
+        const probes = 48;
+        let prevPt = toPx(path.getPointAtLength(0));
+        for (let i = 1; i <= probes; i += 1) {
+          const p = toPx(path.getPointAtLength(((t * len) * i) / probes));
+          approxPx += Math.hypot(p.x - prevPt.x, p.y - prevPt.y);
+          prevPt = p;
         }
-        taper.innerHTML = html;
-
-        // Round halo around the light (head of the wand trail)
-        if (tipHaloRef.current) {
-          tipHaloRef.current.setAttribute('cx', tip.x.toFixed(2));
-          tipHaloRef.current.setAttribute('cy', tip.y.toFixed(2));
-          const r = 2.2 + Math.min(t, 0.2) * 4;
-          tipHaloRef.current.setAttribute('r', r.toFixed(2));
-          tipHaloRef.current.setAttribute('opacity', t < 0.003 ? '0.35' : '0.85');
+        const count = Math.max(8, Math.ceil(approxPx / STEP_PX));
+        const points = [];
+        for (let i = 0; i <= count; i += 1) {
+          const u = t * (i / count);
+          points.push(toPx(path.getPointAtLength(u * len)));
         }
+        pointsCacheRef.current = points;
+        tipPxRef.current = tip;
+        return { t, tip, points };
       } catch {
-        /* path not ready */
+        return null;
       }
     },
     [ribbonPath, tipLeft, tipTop, tipOpacity]
   );
 
+  const paintFrame = useCallback(
+    (spawn) => {
+      const sized = syncCanvasSize();
+      if (!sized) return;
+      const { ctx, w, h } = sized;
+      const sampled = samplePath(progressRef.current, w, h);
+      if (!sampled) return;
+      const { t, tip, points } = sampled;
+
+      ctx.clearRect(0, 0, w, h);
+      if (t < 0.001 || points.length < 2) {
+        ctx.beginPath();
+        ctx.fillStyle = 'rgba(255, 106, 61, 0.9)';
+        ctx.arc(tip.x, tip.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+        return;
+      }
+
+      const last = points.length - 1;
+
+      const strokeFull = () => {
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < last; i += 1) {
+          const mx = (points[i].x + points[i + 1].x) * 0.5;
+          const my = (points[i].y + points[i + 1].y) * 0.5;
+          ctx.quadraticCurveTo(points[i].x, points[i].y, mx, my);
+        }
+        ctx.lineTo(points[last].x, points[last].y);
+      };
+
+      // Tapered body: ONE filled ribbon (origin thin → tip thick). No mid-path
+      // round-cap layers (those read as sausages).
+      {
+        const left = [];
+        const right = [];
+        for (let i = 0; i <= last; i += 1) {
+          const prev = points[Math.max(0, i - 1)];
+          const next = points[Math.min(last, i + 1)];
+          let dx = next.x - prev.x;
+          let dy = next.y - prev.y;
+          const dist = Math.hypot(dx, dy) || 1;
+          const nx = -dy / dist;
+          const ny = dx / dist;
+          const ease = (i / last) ** 2.1;
+          const half = 0.7 + 7.5 * ease;
+          left.push({ x: points[i].x + nx * half, y: points[i].y + ny * half });
+          right.push({ x: points[i].x - nx * half, y: points[i].y - ny * half });
+        }
+
+        // Chaikin-ish pass for softer edges
+        const soften = (arr) => {
+          if (arr.length < 3) return arr;
+          const out = [arr[0]];
+          for (let i = 0; i < arr.length - 1; i += 1) {
+            const a = arr[i];
+            const b = arr[i + 1];
+            out.push({ x: a.x * 0.75 + b.x * 0.25, y: a.y * 0.75 + b.y * 0.25 });
+            out.push({ x: a.x * 0.25 + b.x * 0.75, y: a.y * 0.25 + b.y * 0.75 });
+          }
+          out.push(arr[arr.length - 1]);
+          return out;
+        };
+        const L = soften(left);
+        const R = soften(right);
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(L[0].x, L[0].y);
+        for (let i = 1; i < L.length; i += 1) ctx.lineTo(L[i].x, L[i].y);
+        for (let i = R.length - 1; i >= 0; i -= 1) ctx.lineTo(R[i].x, R[i].y);
+        ctx.closePath();
+        const band = ctx.createLinearGradient(
+          points[0].x,
+          points[0].y,
+          tip.x,
+          tip.y
+        );
+        band.addColorStop(0, 'rgba(255, 106, 61, 0.15)');
+        band.addColorStop(0.55, 'rgba(255, 106, 61, 0.45)');
+        band.addColorStop(1, 'rgba(255, 140, 90, 0.8)');
+        ctx.fillStyle = band;
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Permanent continuous core (full origin → tip, single stroke)
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.shadowColor = 'rgba(255, 106, 61, 0.85)';
+      ctx.shadowBlur = 14;
+      ctx.strokeStyle = 'rgba(255, 106, 61, 0.55)';
+      ctx.lineWidth = 5;
+      strokeFull();
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = '#FF6A3D';
+      ctx.lineWidth = 2;
+      strokeFull();
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(255, 230, 200, 0.95)';
+      ctx.lineWidth = 1;
+      strokeFull();
+      ctx.stroke();
+      ctx.restore();
+
+      // Particle wake near tip (YouTube short style — sparks, not the body)
+      if (!reduce && t > 0.008 && spawn) {
+        const burst = spawn === 'scroll' ? 14 : 5;
+        for (let n = 0; n < burst; n += 1) {
+          if (particlesRef.current.length >= PARTICLE_CAP) break;
+          const bias = 0.7 + Math.random() * 0.3;
+          const idx = Math.min(last, Math.floor(bias * last));
+          const p = points[idx];
+          particlesRef.current.push({
+            x: p.x + (Math.random() - 0.5) * 28,
+            y: p.y + (Math.random() - 0.5) * 28,
+            vx: (Math.random() - 0.5) * 2.2,
+            vy: (Math.random() - 0.5) * 2.2 - 0.25,
+            life: 0.65 + Math.random() * 0.35,
+            size: 0.5 + Math.random() * 1.4,
+          });
+        }
+      }
+
+      particlesRef.current = particlesRef.current
+        .map((p) => ({
+          ...p,
+          x: p.x + p.vx,
+          y: p.y + p.vy,
+          vx: p.vx * 0.97,
+          vy: p.vy * 0.97 + 0.01,
+          life: p.life - 0.015,
+        }))
+        .filter((p) => p.life > 0);
+
+      particlesRef.current.forEach((p) => {
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(255, 170, 120, ${p.life * 0.9})`;
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      const head = ctx.createRadialGradient(tip.x, tip.y, 0, tip.x, tip.y, 34);
+      head.addColorStop(0, 'rgba(255,255,255,1)');
+      head.addColorStop(0.18, 'rgba(255,210,160,0.95)');
+      head.addColorStop(0.45, 'rgba(255,106,61,0.7)');
+      head.addColorStop(1, 'rgba(255,106,61,0)');
+      ctx.beginPath();
+      ctx.fillStyle = head;
+      ctx.arc(tip.x, tip.y, 34, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.fillStyle = '#fff';
+      ctx.shadowColor = '#FF6A3D';
+      ctx.shadowBlur = 20;
+      ctx.arc(tip.x, tip.y, 5.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    },
+    [syncCanvasSize, samplePath, reduce]
+  );
+
   useEffect(() => {
-    updateComet(scrollYProgress.get());
-  }, [ribbonPath, updateComet, scrollYProgress]);
+    progressRef.current = scrollYProgress.get();
+  }, [ribbonPath, scrollYProgress]);
+
+  useEffect(() => {
+    let raf = 0;
+    let lastProgress = -1;
+    const tick = () => {
+      const p = progressRef.current;
+      const moving = Math.abs(p - lastProgress) > 0.00005;
+      lastProgress = p;
+      paintFrame(reduce ? false : moving ? 'scroll' : 'idle');
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [paintFrame, reduce]);
 
   useMotionValueEvent(scrollYProgress, 'change', (v) => {
+    progressRef.current = v;
     const root = pageRef.current;
     if (root) {
       root.dataset.depth = v > 0.48 ? 'deep' : v > 0.28 ? 'mid' : 'top';
     }
 
     if (v > 0 && v < 0.05) measure();
-
-    updateComet(v);
 
     const count = Math.max(expCount, 1);
     const expStep = 0.28 / count;
@@ -362,64 +555,18 @@ function ScrollAtmosphere({ pageRef, refs, onProgress, expCount }) {
         style={reduce ? undefined : { y: orbY3 }}
       />
 
+      {/* Hidden SVG only for path geometry / sampling */}
       <svg
-        className={styles.ribbon}
+        className={styles.ribbonMeasure}
         viewBox={`0 0 100 ${VIEW_H}`}
         preserveAspectRatio="none"
         fill="none"
+        aria-hidden
       >
-        <defs>
-          <filter id="wandGlow" x="-80%" y="-80%" width="260%" height="260%">
-            <feGaussianBlur stdDeviation="1.8" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-          <radialGradient id="tipHaloGrad" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
-            <stop offset="35%" stopColor="#FF6A3D" stopOpacity="0.75" />
-            <stop offset="100%" stopColor="#FF6A3D" stopOpacity="0" />
-          </radialGradient>
-        </defs>
-
-        {/* Guide path for tip / taper sampling */}
-        <path
-          ref={pathRef}
-          d={ribbonPath}
-          fill="none"
-          stroke="transparent"
-          strokeWidth="3"
-        />
-
-        {/* Continuous thin spine origin → tip (never cut off) */}
-        <path
-          ref={spineRef}
-          d={ribbonPath}
-          pathLength={1}
-          fill="none"
-          stroke="rgba(255, 138, 92, 0.55)"
-          strokeWidth={MIN_W}
-          strokeLinecap="round"
-          strokeDasharray="0.001 1"
-          strokeDashoffset="0"
-          opacity="0"
-          filter="url(#wandGlow)"
-        />
-
-        {/* Tapered wand body (thin → thick toward the light) */}
-        <g ref={taperGroupRef} filter="url(#wandGlow)" />
-
-        {/* Round head around the light */}
-        <circle
-          ref={tipHaloRef}
-          cx="0"
-          cy="0"
-          r="0"
-          fill="url(#tipHaloGrad)"
-          opacity="0"
-        />
+        <path ref={pathRef} d={ribbonPath} fill="none" stroke="transparent" />
       </svg>
+
+      <canvas ref={canvasRef} className={styles.wandCanvas} />
 
       {!reduce && (
         <motion.div
@@ -427,21 +574,6 @@ function ScrollAtmosphere({ pageRef, refs, onProgress, expCount }) {
           style={{ left: tipLeft, top: tipTop, opacity: tipOpacity }}
         />
       )}
-
-      <div className={styles.dust}>
-        {Array.from({ length: 10 }).map((_, i) => (
-          <span
-            key={i}
-            className={styles.dustDot}
-            style={{
-              left: `${10 + ((i * 8.1) % 80)}%`,
-              top: `${12 + ((i * 9.7) % 78)}%`,
-              animationDelay: `${i * 0.45}s`,
-              animationDuration: `${9 + (i % 5) * 1.4}s`,
-            }}
-          />
-        ))}
-      </div>
     </div>
   );
 }
