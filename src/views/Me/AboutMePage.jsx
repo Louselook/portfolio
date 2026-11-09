@@ -1,67 +1,78 @@
-import React, { useState } from 'react';
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import styles from './AboutMePage.module.css'
-import ContactMe from './contact/ContactMe'
+import { motion, useReducedMotion } from 'motion/react';
+import { profile } from '../../data/profile';
+import cvUrl from '../../assets/docs/CVJuanes.pdf_2026_8_6.pdf';
+import styles from './AboutMePage.module.css';
 
-const AboutMePage = () => {
-  const [isPopupOpen, setIsPopupOpen] = useState(false);
+export default function AboutMePage() {
+  const reduce = useReducedMotion();
 
-  const togglePopup = () => {
-    setIsPopupOpen(!isPopupOpen);
-  };
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   return (
-    <>
-    <Link to="/" className={styles['back']}>
-      <span className={styles['back-arrow']}>◀</span>
-    </Link>
-    <div className={styles['content']}>
-      <div className={styles['presentation']}>
-        <div>
-          <h1>I'm Juan Esteban Arenilla Buendia</h1>
-          <p>Developer & Cybernetics systems engineering</p>
-          <button className={styles['contact-button']} onClick={togglePopup}>
-            Contact me!
-          </button>
+    <div className={styles.page}>
+      <div className="container">
+        <div className={styles.hero}>
+          <motion.div
+            className={styles.copy}
+            initial={reduce ? false : { opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <h1>{profile.name}</h1>
+            <p className={styles.role}>{profile.title}</p>
+            <p>{profile.summary}</p>
+            <div className={styles.actions}>
+              <a className="btn btn-primary" href={profile.links.whatsapp} target="_blank" rel="noreferrer">
+                Contactar
+              </a>
+              <a className="btn btn-ghost" href={cvUrl} download="CV-Juan-Esteban-Arenilla.pdf">
+                Descargar CV
+              </a>
+              <Link className="btn btn-ghost" to="/#proyectos">
+                Ver proyectos
+              </Link>
+            </div>
+          </motion.div>
+          <motion.div
+            className={styles.photo}
+            initial={reduce ? false : { opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            <img src={profile.photos[0]} alt={profile.name} />
+          </motion.div>
         </div>
-        <img 
-            src="assets/me.png" 
-            alt="Mi foto" 
-            className={styles["mi-foto"]}
-          />
-      </div>
 
-      <div className={styles['study']}>
-        <h3>Studies & skills</h3>
-        <div className={`row ${styles['study-content']}`}>
-          {studyCard({ title: 'Universidad', subtitle: 'Ingenieria en sistemas ciberneticos', img: "assets/studies/usb.png" })}
-          {studyCard({ title: 'Python', subtitle: 'Desarrollo backend y automatizaciones', img: "assets/studies/python.png"})}
-          {studyCard({ title: 'Flutter', subtitle: 'Desarrollo apps multiplataforma', img: "assets/studies/flutter.png"})}
-        
-          {studyCard({ title: 'React', subtitle: 'Desarrollo web', img: "assets/studies/react.png" })}
-          {studyCard({ title: 'Sql', subtitle: 'Consultas y análisis de datos"', img: "assets/studies/sql.png" })}
-        </div>
+        <section className={styles.block}>
+          <h2>Estudios & skills</h2>
+          <div className={styles.studies}>
+            {profile.studies.map((item) => (
+              <article key={item.title} className={styles.studyCard}>
+                <img src={item.img} alt="" />
+                <h3>{item.title}</h3>
+                <p>{item.subtitle}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className={styles.block}>
+          <h2>Experiencia</h2>
+          <div className={styles.list}>
+            {profile.experience.map((item, index) => (
+              <article key={item.title} className={styles.expItem}>
+                <span className={styles.expIndex}>{String(index + 1).padStart(2, '0')}</span>
+                <div className={styles.expCopy}>
+                  <h3>{item.title}</h3>
+                  <p>{item.detail}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
       </div>
     </div>
-    <ContactMe isOpen={isPopupOpen} onClose={togglePopup} />
-  </>
-  )
-}
-
-export default AboutMePage
-
-const studyCard = ({title, subtitle, img}) => {
-  return (
-    <div className={styles['studyCard']}>
-      <img 
-        src={img} 
-        alt="icon studies" 
-        className={styles["icon-studies"]}
-      />
-      <div className={styles["info-studyCard"]}>
-        <h3 className={styles["text-Title"]}>{title}</h3>
-        <p className={styles["text-Subtitle"]}>{subtitle}</p>
-      </div>
-    </div>
-  )
+  );
 }

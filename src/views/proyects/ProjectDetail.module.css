@@ -1,0 +1,252 @@
+.page {
+  padding-bottom: 4rem;
+}
+
+.hero {
+  position: relative;
+  min-height: calc(100vh - var(--nav-h));
+  display: grid;
+  align-items: end;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.heroMedia {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.heroMedia img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.42;
+}
+
+.heroScrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(247, 245, 240, 0.2) 0%, rgba(247, 245, 240, 0.78) 48%, var(--bg) 100%),
+    radial-gradient(600px 320px at 80% 20%, rgba(255, 106, 61, 0.16), transparent 60%);
+}
+
+.heroContent {
+  position: relative;
+  z-index: 1;
+  width: min(100% - 2rem, var(--container));
+  margin-inline: auto;
+  padding: 2rem 0 3.5rem;
+  display: grid;
+  gap: 1.25rem;
+  max-width: 48rem;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  width: fit-content;
+}
+
+.back:hover {
+  color: var(--ink);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.heroContent h1 {
+  font-size: clamp(2.8rem, 7vw, 5rem);
+}
+
+.heroContent p {
+  color: var(--ink-soft);
+  font-size: clamp(1.1rem, 2.2vw, 1.3rem);
+  max-width: 40rem;
+}
+
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.chapter {
+  min-height: min(92vh, 820px);
+  display: grid;
+  align-items: center;
+  padding: clamp(3rem, 7vw, 5.5rem) 0;
+}
+
+.chapterInner {
+  width: min(100% - 2rem, var(--container));
+  margin-inline: auto;
+  display: grid;
+  gap: 2rem;
+  align-items: center;
+}
+
+.chapterCopy {
+  display: grid;
+  gap: 1rem;
+  max-width: 34rem;
+}
+
+.chapterCopy h2 {
+  font-size: clamp(2rem, 4.5vw, 3.2rem);
+}
+
+.chapterCopy p {
+  color: var(--muted);
+  font-size: 1.12rem;
+}
+
+.chapterMedia {
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  background: var(--surface);
+}
+
+.chapterMedia img,
+.chapterMedia video {
+  width: 100%;
+  aspect-ratio: 16 / 11;
+  object-fit: cover;
+}
+
+.featureGrid {
+  display: grid;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.featureList {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.featureCard {
+  display: grid;
+  gap: 0.35rem;
+  text-align: left;
+  padding: 1.1rem 1.2rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.88);
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.featureCard:hover {
+  transform: translateX(4px);
+  border-color: rgba(255, 106, 61, 0.4);
+}
+
+.featureActive {
+  background: rgba(255, 106, 61, 0.12);
+  border-color: rgba(255, 106, 61, 0.45);
+}
+
+.featureCard h3 {
+  font-size: 1.2rem;
+}
+
+.featureCard p {
+  color: var(--muted);
+  font-size: 0.98rem;
+}
+
+.phoneWrap {
+  justify-self: center;
+  width: min(100%, 320px);
+}
+
+.phone {
+  border-radius: 36px;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  background: #050510;
+  padding: 0.55rem;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.phoneScreen {
+  border-radius: 28px;
+  overflow: hidden;
+  aspect-ratio: 9 / 19;
+  background: #000;
+}
+
+.phoneScreen img,
+.phoneScreen video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(0, 0, 0, 0.72);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.modalContent {
+  position: relative;
+  width: min(100%, 920px);
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: #000;
+  box-shadow: var(--shadow);
+}
+
+.modalContent video {
+  width: 100%;
+  max-height: 80vh;
+}
+
+.closeButton {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 2;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: rgba(11, 11, 31, 0.85);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+@media (min-width: 900px) {
+  .chapterInner {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .chapterInnerReverse .chapterCopy {
+    order: 2;
+  }
+
+  .chapterInnerReverse .chapterMedia {
+    order: 1;
+  }
+
+  .featureGrid {
+    grid-template-columns: 1.05fr 0.95fr;
+  }
+}

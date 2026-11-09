@@ -1,0 +1,39 @@
+{
+  "name": "Juan Esteban Arenill Buendia",
+  "colors": {
+    "ink": "#1F1B4D",
+    "accent": "#FF6A3D",
+    "accentText": "#B8401A",
+    "accentOnDark": "#FF8A5C",
+    "background": "#F7F5F0",
+    "surface": "#FFFFFF",
+    "textMuted": "#5A5775",
+    "border": "#E2DED3",
+    "dark": {
+      "background": "#1F1B4D",
+      "surface": "#2A2660",
+      "text": "#F7F5F0",
+      "textMuted": "#BDB9D6",
+      "border": "#3A3680",
+      "link": "#FF8A5C"
+    }
+  },
+  "fonts": {
+    "family": "Inter",
+    "weights": [
+      400,
+      500,
+      600
+    ],
+    "source": "https://fonts.google.com/specimen/Inter",
+    "logoWeight": 500
+  },
+  "logos": {
+    "favicon": "web/favicon.svg",
+    "header": "logos/svg/imagotipo-horizontal-color.svg",
+    "headerDark": "logos/svg/imagotipo-horizontal-light.svg",
+    "compact": "logos/svg/isotipo-color.svg",
+    "compactDark": "logos/svg/isotipo-light.svg",
+    "social": "web/og-image.png"
+  }
+}

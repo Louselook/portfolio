@@ -1,0 +1,39 @@
+/* Juan Esteban Arenill Buendia – design tokens. Importar antes que cualquier otro CSS. */
+:root {
+  /* Marca */
+  --color-ink: #1F1B4D;          /* índigo: color principal, texto */
+  --color-accent: #FF6A3D;     /* naranja: acento, SOLO decorativo (ver README) */
+  --color-accent-text: #B8401A; /* naranja oscuro: enlaces y texto sobre fondo claro */
+  --color-accent-on-dark: #FF8A5C; /* naranja claro: sobre fondo índigo */
+  /* Tema claro (por defecto) */
+  --bg: #F7F5F0;
+  --surface: #FFFFFF;
+  --text: #1F1B4D;
+  --text-muted: #5A5775;
+  --border: #E2DED3;
+  --link: #B8401A;
+  --focus: #1F1B4D;
+  /* Tipografía */
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* Espaciado (base 4px) */
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-6: 24px; --space-8: 32px; --space-12: 48px; --space-16: 64px; --space-24: 96px;
+  /* Radios */
+  --radius-sm: 8px; --radius-md: 14px; --radius-lg: 24px; --radius-pill: 999px;
+  /* Layout */
+  --container: 1120px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1F1B4D;
+    --surface: #2A2660;
+    --text: #F7F5F0;
+    --text-muted: #BDB9D6;
+    --border: #3A3680;
+    --link: #FF8A5C;
+    --focus: #F7F5F0;
+  }
+}
+body { margin: 0; background: var(--bg); color: var(--text); font: 400 1rem/1.65 var(--font-sans); -webkit-font-smoothing: antialiased; }
+a { color: var(--link); }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 4px; }

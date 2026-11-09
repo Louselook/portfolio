@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Juan Esteban Arenill Buendia – Portafolio</title>
+<meta name="description" content="[DESCRIPCIÓN DE 140-160 CARACTERES]">
+<meta name="theme-color" content="#1F1B4D">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta property="og:title" content="Juan Esteban Arenill Buendia">
+<meta property="og:image" content="https://TU-DOMINIO.com/og-image.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/tokens.css">
+<style>
+.container{max-width:var(--container);margin:0 auto;padding:0 var(--space-6)}
+.nav{display:flex;align-items:center;justify-content:space-between;height:72px;border-bottom:1px solid var(--border)}
+.nav a{text-decoration:none;color:var(--text)} .nav a:hover{color:var(--link)}
+.nav ul{display:flex;gap:var(--space-8);list-style:none;margin:0;padding:0}
+.logo-full{display:none;height:40px} .logo-mark{height:36px}
+@media (min-width:720px){.logo-full{display:block}.logo-mark{display:none}}
+h1{font-size:clamp(2.25rem,5vw,3.5rem);line-height:1.1;letter-spacing:-.02em;font-weight:600;margin:var(--space-16) 0 var(--space-4)}
+</style>
+</head>
+<body>
+<header class="container nav">
+  <a href="/" aria-label="Juan Esteban Arenill Buendia, inicio">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="/imagotipo-horizontal-light.svg">
+      <img class="logo-full" src="/imagotipo-horizontal-color.svg" alt="Juan Esteban Arenill Buendia">
+    </picture>
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="/isotipo-light.svg">
+      <img class="logo-mark" src="/isotipo-color.svg" alt="Juan Esteban Arenill Buendia">
+    </picture>
+  </a>
+  <nav aria-label="Principal"><ul><li><a href="#proyectos">Proyectos</a></li><li><a href="#sobre-mi">Sobre mí</a></li><li><a href="#contacto">Contacto</a></li></ul></nav>
+</header>
+<main class="container">
+  <h1>[TU TITULAR]</h1>
+  <p>[UNA FRASE SOBRE LO QUE HACES]</p>
+</main>
+</body>
+</html>
