@@ -56,6 +56,22 @@
   box-shadow: var(--shadow-soft);
 }
 
+.navProject {
+  background: rgba(26, 26, 28, 0.78);
+  backdrop-filter: blur(18px);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+  color: #f4f3f7;
+}
+
+.navProjectLight {
+  background: rgba(247, 245, 240, 0.88);
+  backdrop-filter: blur(16px);
+  border-bottom-color: var(--border);
+  box-shadow: 0 10px 28px rgba(31, 27, 77, 0.06);
+  color: var(--ink);
+}
+
 .navOpen.navClear,
 .navOpen.navMid {
   background: rgba(247, 245, 240, 0.96);
@@ -64,6 +80,14 @@
 
 .navOpen.navDeep {
   background: rgba(31, 27, 77, 0.94);
+}
+
+.navOpen.navProject {
+  background: rgba(26, 26, 28, 0.96);
+}
+
+.navOpen.navProjectLight {
+  background: rgba(247, 245, 240, 0.96);
 }
 
 .navInner {
@@ -125,6 +149,26 @@
   color: var(--text-on-deep);
 }
 
+.navProject .link {
+  color: #bdbcc4;
+}
+
+.navProject .link:hover,
+.navProject .linkActive {
+  background: rgba(255, 255, 255, 0.12);
+  color: #f4f3f7;
+}
+
+.navProjectLight .link {
+  color: var(--muted);
+}
+
+.navProjectLight .link:hover,
+.navProjectLight .linkActive {
+  background: rgba(31, 27, 77, 0.08);
+  color: var(--ink);
+}
+
 .menuBtn {
   display: inline-flex;
   align-items: center;
@@ -145,15 +189,49 @@
   color: var(--text-on-deep);
 }
 
+.navProject .menuBtn {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.16);
+  color: #f4f3f7;
+}
+
+.navProjectLight .menuBtn {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--ink);
+}
+
 .navDeep .mobilePanel {
   background: var(--surface-deep);
   border-color: var(--border-deep);
   color: var(--text-on-deep);
 }
 
+.navProject .mobilePanel {
+  background: #1a1a1c;
+  border-color: #333;
+  color: #f4f3f7;
+}
+
+.navProjectLight .mobilePanel {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--ink);
+}
+
 .navDeep .mobileLink:hover,
 .navDeep .mobileLinkActive {
   background: rgba(255, 138, 92, 0.16);
+}
+
+.navProject .mobileLink:hover,
+.navProject .mobileLinkActive {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.navProjectLight .mobileLink:hover,
+.navProjectLight .mobileLinkActive {
+  background: rgba(31, 27, 77, 0.08);
 }
 
 .mobilePanel {

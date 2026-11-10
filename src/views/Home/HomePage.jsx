@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
+  AnimatePresence,
   motion,
   useReducedMotion,
   useScroll,
@@ -9,7 +10,7 @@ import {
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import { profile } from '../../data/profile';
 import { projects } from '../../data/projects';
-import { getStackIcon } from '../../data/stackIcons';
+import { getStackIcon, HERO_TOOLS } from '../../data/stackIcons';
 import ProjectsCarousel from '../../components/projects/ProjectsCarousel';
 import QuestionMarkParticles from './QuestionMarkParticles';
 import styles from './HomePage.module.css';
@@ -28,10 +29,11 @@ import {
   trailParams,
 } from './trailRoute';
 
-const BUBBLE_NAMES = ['Flutter', 'FastAPI', 'React', 'Python', 'Supabase', 'Firebase'];
 const BUBBLE_SIZES = ['sm', 'md', 'lg'];
 /** Wordmark logos need a bigger bubble so the text stays readable. */
-const BUBBLE_WORDMARKS = new Set(['FastAPI', 'Firebase']);
+const BUBBLE_WORDMARKS = new Set(['FastAPI', 'Firebase', 'Django', 'Wompi', 'AWS']);
+/** How often slots explode and swap to the next tools in the pool. */
+const BUBBLE_ROTATE_MS = 3200;
 
 function shuffleList(items) {
   const list = [...items];
@@ -86,40 +88,65 @@ function clusterCorner(count, corner) {
   });
 }
 
-/**
- * On each load: 1–5 bubbles in the top-left, the rest in the opposite
- * bottom-right corner (also 1–5). Names/sizes shuffled.
- */
-function pickCornerSplit() {
-  // Prefer 3–3 and 2–4 over 1–5
+/** On each load: 1–5 per corner (e.g. 3–3, 5–1, 2–4). */
+function pickCornerCount() {
   const weighted = [2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 1, 5];
   return weighted[Math.floor(Math.random() * weighted.length)];
 }
 
-function buildHeroBubbles() {
-  const names = shuffleList(BUBBLE_NAMES);
-  const topLeftCount = pickCornerSplit();
-  const tlNames = names.slice(0, topLeftCount);
-  const brNames = names.slice(topLeftCount);
-  const tlSlots = clusterCorner(tlNames.length, 'tl');
-  const brSlots = clusterCorner(brNames.length, 'br');
-  const sizes = shuffleList([
-    ...Array.from({ length: names.length }, (_, i) => BUBBLE_SIZES[i % BUBBLE_SIZES.length]),
-  ]);
+function sizeFor(name, fallback) {
+  return BUBBLE_WORDMARKS.has(name) ? 'xl' : fallback;
+}
 
-  const make = (name, slot, i) => ({
-    name,
-    ...slot,
-    size: BUBBLE_WORDMARKS.has(name) ? 'xl' : sizes[i % sizes.length],
-    wordmark: BUBBLE_WORDMARKS.has(name),
-    delay: i * 0.18,
-    dur: 4.2 + (i % 3) * 0.45,
-  });
+/**
+ * Fixed slot positions for this page load + an initial tool assignment.
+ * Visible slots cycle through all HERO_TOOLS over time.
+ */
+function buildHeroBubbleLayout() {
+  const tlCount = pickCornerCount();
+  const brCount = pickCornerCount();
+  const slotCount = tlCount + brCount;
+  const pool = shuffleList(HERO_TOOLS);
+  const initial = pool.slice(0, slotCount);
+  const waiting = pool.slice(slotCount);
+  const sizes = shuffleList(
+    Array.from({ length: slotCount }, (_, i) => BUBBLE_SIZES[i % BUBBLE_SIZES.length]),
+  );
+  const tlSlots = clusterCorner(tlCount, 'tl');
+  const brSlots = clusterCorner(brCount, 'br');
 
-  return [
-    ...tlNames.map((name, i) => make(name, tlSlots[i], i)),
-    ...brNames.map((name, i) => make(name, brSlots[i], i + tlNames.length)),
+  const slots = [
+    ...tlSlots.map((pos, i) => ({
+      id: `tl-${i}`,
+      ...pos,
+      size: sizeFor(initial[i], sizes[i]),
+      wordmark: BUBBLE_WORDMARKS.has(initial[i]),
+      delay: i * 0.14,
+      dur: 4.2 + (i % 3) * 0.45,
+    })),
+    ...brSlots.map((pos, i) => {
+      const idx = tlCount + i;
+      return {
+        id: `br-${i}`,
+        ...pos,
+        size: sizeFor(initial[idx], sizes[idx]),
+        wordmark: BUBBLE_WORDMARKS.has(initial[idx]),
+        delay: idx * 0.14,
+        dur: 4.2 + (idx % 3) * 0.45,
+      };
+    }),
   ];
+
+  return {
+    slots,
+    occupants: initial.map((name, i) => ({
+      slotId: slots[i].id,
+      name,
+      key: `${slots[i].id}-${name}-0`,
+    })),
+    waiting,
+    gen: 0,
+  };
 }
 
 const TRAIL_COLOR = '#FF6A3D';
@@ -817,8 +844,12 @@ function ScrollAtmosphere({ pageRef, refs, onProgress }) {
 
 export default function HomePage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const reduce = useReducedMotion();
-  const [heroBubbles] = useState(buildHeroBubbles);
+  const [bubbleLayout] = useState(buildHeroBubbleLayout);
+  const [occupants, setOccupants] = useState(bubbleLayout.occupants);
+  const waitRef = useRef(bubbleLayout.waiting);
+  const genRef = useRef(bubbleLayout.gen);
   const pageRef = useRef(null);
   const nameDotRef = useRef(null);
   const logoMarkRef = useRef(null);
@@ -832,6 +863,55 @@ export default function HomePage() {
   const contactMarkRef = useRef(null);
   const expItemRefs = useRef([]);
   const skillChipRefs = useRef([]);
+
+  useEffect(() => {
+    if (reduce || bubbleLayout.slots.length === 0) return undefined;
+
+    const tick = () => {
+      setOccupants((prev) => {
+        if (prev.length === 0) return prev;
+
+        const swapCount = Math.min(
+          prev.length,
+          1 + Math.floor(Math.random() * Math.min(3, prev.length)),
+        );
+        const order = shuffleList(prev.map((_, i) => i)).slice(0, swapCount);
+        const next = [...prev];
+        let queue = [...waitRef.current];
+        const visible = new Set(next.map((o) => o.name));
+
+        order.forEach((idx) => {
+          const outgoing = next[idx];
+          visible.delete(outgoing.name);
+
+          // Prefer tools not currently on screen; fall back to the queue.
+          let pickAt = queue.findIndex((n) => !visible.has(n) && n !== outgoing.name);
+          if (pickAt < 0) pickAt = queue.findIndex((n) => n !== outgoing.name);
+          if (pickAt < 0) pickAt = 0;
+
+          const incoming = queue.splice(pickAt, 1)[0] || outgoing.name;
+          queue.push(outgoing.name);
+          visible.add(incoming);
+
+          genRef.current += 1;
+          const slot = bubbleLayout.slots.find((s) => s.id === outgoing.slotId);
+          next[idx] = {
+            slotId: outgoing.slotId,
+            name: incoming,
+            key: `${outgoing.slotId}-${incoming}-${genRef.current}`,
+            size: sizeFor(incoming, slot?.size || 'md'),
+            wordmark: BUBBLE_WORDMARKS.has(incoming),
+          };
+        });
+
+        waitRef.current = queue;
+        return next;
+      });
+    };
+
+    const id = window.setInterval(tick, BUBBLE_ROTATE_MS);
+    return () => window.clearInterval(id);
+  }, [reduce, bubbleLayout.slots]);
 
   const refs = useRef({
     origin: nameDotRef,
@@ -926,9 +1006,9 @@ export default function HomePage() {
             </h1>
             <p className={styles.lead}>{profile.headline}</p>
             <div className={styles.ctaRow}>
-              <a className="btn btn-primary" href="#proyectos">
+              <Link className="btn btn-primary" to="/proyectos">
                 Ver proyectos <ArrowDownRight size={18} />
-              </a>
+              </Link>
               <Link className="btn btn-ghost" to="/about">
                 Sobre mí
               </Link>
@@ -946,34 +1026,90 @@ export default function HomePage() {
                 src="/brand/imagotipo-vertical-color.svg"
                 alt="Juan Esteban Arenill Buendia"
               />
-              <div className={styles.logoBubbles} aria-hidden>
-                {heroBubbles.map((bubble) => (
-                  <motion.span
-                    key={bubble.name}
-                    className={`${styles.techBubble} ${styles[`bubble${bubble.size}`]}${
-                      bubble.wordmark ? ` ${styles.bubbleWordmark}` : ''
-                    }`}
-                    style={{
-                      top: bubble.top,
-                      left: bubble.left,
-                      right: bubble.right,
-                      bottom: bubble.bottom,
-                    }}
-                    animate={
-                      reduce
-                        ? undefined
-                        : { y: [0, -6, 0], x: [0, 3, 0] }
-                    }
-                    transition={{
-                      duration: bubble.dur,
-                      delay: bubble.delay,
-                      repeat: Infinity,
-                      ease: 'easeInOut',
-                    }}
-                  >
-                    <img src={getStackIcon(bubble.name)} alt="" />
-                  </motion.span>
-                ))}
+              <div className={styles.logoBubbles}>
+                <AnimatePresence initial={false}>
+                  {occupants.map((item) => {
+                    const slot = bubbleLayout.slots.find((s) => s.id === item.slotId);
+                    if (!slot) return null;
+                    const size = item.size || slot.size;
+                    const wordmark = item.wordmark ?? slot.wordmark;
+                    return (
+                      <motion.button
+                        key={item.key}
+                        type="button"
+                        className={`${styles.techBubble} ${styles[`bubble${size}`]}${
+                          wordmark ? ` ${styles.bubbleWordmark}` : ''
+                        }`}
+                        style={{
+                          top: slot.top,
+                          left: slot.left,
+                          right: slot.right,
+                          bottom: slot.bottom,
+                        }}
+                        title={`Ver proyectos con ${item.name}`}
+                        aria-label={`Ver proyectos con ${item.name}`}
+                        onClick={() =>
+                          navigate(`/proyectos?tech=${encodeURIComponent(item.name)}`)
+                        }
+                        initial={
+                          reduce
+                            ? false
+                            : { scale: 0.2, opacity: 0, filter: 'blur(4px)' }
+                        }
+                        animate={
+                          reduce
+                            ? { opacity: 1, scale: 1 }
+                            : {
+                                scale: 1,
+                                opacity: 1,
+                                filter: 'blur(0px)',
+                                y: [0, -6, 0],
+                                x: [0, 3, 0],
+                              }
+                        }
+                        whileHover={
+                          reduce
+                            ? { scale: 1.08 }
+                            : {
+                                scale: 1.22,
+                                y: -4,
+                                boxShadow: '0 14px 28px rgba(31, 27, 77, 0.22)',
+                              }
+                        }
+                        whileTap={{ scale: 0.94 }}
+                        exit={
+                          reduce
+                            ? undefined
+                            : {
+                                scale: [1, 1.45, 0],
+                                opacity: [1, 0.85, 0],
+                                filter: 'blur(6px)',
+                                transition: { duration: 0.42, ease: 'easeOut' },
+                              }
+                        }
+                        transition={{
+                          scale: { type: 'spring', stiffness: 420, damping: 18 },
+                          opacity: { duration: 0.25 },
+                          filter: { duration: 0.25 },
+                          y: {
+                            duration: slot.dur,
+                            delay: slot.delay,
+                            repeat: Infinity,
+                            ease: 'easeInOut',
+                          },
+                          x: {
+                            duration: slot.dur,
+                            delay: slot.delay,
+                            repeat: Infinity,
+                            ease: 'easeInOut',
+                          },
+                        }}
+                      >
+                        <img src={getStackIcon(item.name)} alt="" />
+                      </motion.button>
+                    );
+                  })}
+                </AnimatePresence>
               </div>
             </div>
           </motion.div>
@@ -994,7 +1130,11 @@ export default function HomePage() {
               Proyectos
             </h2>
             <p className="section-lead">
-              Desliza el carrusel. En hover ves las tecnologías; entra para la landing completa.
+              Preview en carrusel. Tocá una bombita del logo o{' '}
+              <Link to="/proyectos" className={styles.inlineLink}>
+                abrí el catálogo
+              </Link>{' '}
+              para filtrar por tecnología.
             </p>
           </div>
 

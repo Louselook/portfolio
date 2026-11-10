@@ -354,10 +354,29 @@
   border-radius: 50%;
   display: grid;
   place-items: center;
+  padding: 0;
+  margin: 0;
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid var(--border);
   box-shadow: 0 6px 18px rgba(31, 27, 77, 0.12);
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: pointer;
+  z-index: 3;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.techBubble:hover,
+.techBubble:focus-visible {
+  border-color: rgba(255, 106, 61, 0.55);
+  background: #fff;
+  z-index: 5;
+}
+
+.techBubble:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
 }
 
 .bubblesm {
@@ -434,6 +453,17 @@
 
 .projectsBlock :global(.section-lead) {
   color: var(--text-muted);
+}
+
+.inlineLink {
+  color: var(--accent-text);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.inlineLink:hover {
+  color: var(--ink);
 }
 
 .head {

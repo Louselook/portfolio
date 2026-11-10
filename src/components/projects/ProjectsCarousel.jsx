@@ -129,14 +129,20 @@ export default function ProjectsCarousel({ items }) {
                         techIndex
                       );
                       return (
-                        <div
+                        <button
                           key={tech}
+                          type="button"
                           className={`${styles.techBubble} ${styles[float.variant]}`}
                           style={float.style}
-                          title={tech}
+                          title={`Ver proyectos con ${tech}`}
+                          aria-label={`Ver proyectos con ${tech}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/proyectos?tech=${encodeURIComponent(tech)}`);
+                          }}
                         >
                           <img src={getStackIcon(tech)} alt="" />
-                        </div>
+                        </button>
                       );
                     })}
                   </div>

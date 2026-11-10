@@ -6,11 +6,24 @@ import styles from './Layout.module.css';
 const links = [
   { to: '/', label: 'Inicio', end: true },
   { to: '/about', label: 'Sobre mí' },
-  { to: '/#proyectos', label: 'Proyectos', hash: true },
+  {
+    to: '/proyectos',
+    label: 'Proyectos',
+    isActive: (pathname) => pathname === '/proyectos' || pathname.startsWith('/proyectos/'),
+  },
   { to: '/#contacto', label: 'Contacto', hash: true },
 ];
 
+function resolveProjectNav() {
+  if (typeof document === 'undefined') return 'dark';
+  return document.documentElement.dataset.projectNav === 'light' ? 'light' : 'dark';
+}
+
 function resolveDepth(pathname, scrollY) {
+  if (pathname.startsWith('/proyectos/')) {
+    return resolveProjectNav() === 'light' ? 'projectLight' : 'project';
+  }
+
   if (pathname !== '/') {
     return scrollY > 12 ? 'solid' : 'clear';
   }
@@ -24,10 +37,22 @@ function resolveDepth(pathname, scrollY) {
 }
 
 export default function Nav() {
-  const [depth, setDepth] = useState('clear');
-  const [open, setOpen] = useState(false);
   const location = useLocation();
-  const useLightLogo = depth === 'deep';
+  const [depth, setDepth] = useState(() =>
+    resolveDepth(location.pathname, typeof window !== 'undefined' ? window.scrollY : 0),
+  );
+  const [open, setOpen] = useState(false);
+  const useLightLogo = depth === 'deep' || depth === 'project';
+
+  useEffect(() => {
+    if (!location.pathname.startsWith('/proyectos/')) return undefined;
+    const root = document.documentElement;
+    const sync = () => setDepth(resolveDepth(location.pathname, window.scrollY));
+    const observer = new MutationObserver(sync);
+    observer.observe(root, { attributes: true, attributeFilter: ['data-project-nav'] });
+    sync();
+    return () => observer.disconnect();
+  }, [location.pathname]);
 
   useEffect(() => {
     const onScroll = () => setDepth(resolveDepth(location.pathname, window.scrollY));
@@ -59,6 +84,8 @@ export default function Nav() {
     mid: styles.navMid,
     deep: styles.navDeep,
     solid: styles.navSolid,
+    project: styles.navProject,
+    projectLight: styles.navProjectLight,
   }[depth];
 
   return (
@@ -103,9 +130,12 @@ export default function Nav() {
                 key={link.label}
                 to={link.to}
                 end={link.end}
-                className={({ isActive }) =>
-                  `${styles.link} ${isActive ? styles.linkActive : ''}`
-                }
+                className={({ isActive }) => {
+                  const active = link.isActive
+                    ? link.isActive(location.pathname)
+                    : isActive;
+                  return `${styles.link} ${active ? styles.linkActive : ''}`;
+                }}
               >
                 {link.label}
               </NavLink>
@@ -141,9 +171,12 @@ export default function Nav() {
                 key={link.label}
                 to={link.to}
                 end={link.end}
-                className={({ isActive }) =>
-                  `${styles.mobileLink} ${isActive ? styles.mobileLinkActive : ''}`
-                }
+                className={({ isActive }) => {
+                  const active = link.isActive
+                    ? link.isActive(location.pathname)
+                    : isActive;
+                  return `${styles.mobileLink} ${active ? styles.mobileLinkActive : ''}`;
+                }}
               >
                 {link.label}
               </NavLink>
