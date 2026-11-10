@@ -11,14 +11,22 @@ import { profile } from '../../data/profile';
 import { projects } from '../../data/projects';
 import { getStackIcon } from '../../data/stackIcons';
 import ProjectsCarousel from '../../components/projects/ProjectsCarousel';
+import QuestionMarkParticles from './QuestionMarkParticles';
 import styles from './HomePage.module.css';
+import { smoothDamp, tailFromVelocity } from './trailSmoothing';
 import {
-  simplifyPoints,
-  roundedPath,
-  smoothDamp,
-  buildTipTable,
-  tailFromVelocity,
-} from './trailSmoothing';
+  buildSpline,
+  buildTrack,
+  clamp,
+  coil,
+  cubicPoints,
+  frontRangesOf,
+  passU,
+  rectInPage,
+  smoothstep,
+  textRectInPage,
+  trailParams,
+} from './trailRoute';
 
 const BUBBLE_NAMES = ['Flutter', 'FastAPI', 'React', 'Python', 'Supabase', 'Firebase'];
 const BUBBLE_SIZES = ['sm', 'md', 'lg'];
@@ -115,19 +123,29 @@ function buildHeroBubbles() {
 }
 
 const TRAIL_COLOR = '#FF6A3D';
-/** Stroke widths in viewBox units so dasharray stays in the same space as the path. */
-const TRAIL_BASE_W = 0.42;
+/** Stroke widths in page px (the SVG viewBox matches the page size 1:1). */
+const TRAIL_BASE_W = 2;
 /** Capas cercanas en ancho para evitar escalones visibles. */
 const TRAIL_LAYERS = [
-  { k: 1.0, o: 0.22, w: 0.46 },
-  { k: 0.62, o: 0.5, w: 0.54 },
-  { k: 0.3, o: 0.9, w: 0.66 },
+  { k: 1.0, o: 0.22, w: 2.4 },
+  { k: 0.62, o: 0.5, w: 2.9 },
+  { k: 0.3, o: 0.9, w: 3.6 },
 ];
-/** Tip sits in the upper half of the viewport (fraction of window height). */
+/** Tip sits in the upper half of the viewport mid-page (fraction of window height). */
 const TIP_VIEW_ANCHOR = 0.38;
-const TIP_SAMPLE_N = 320;
-/** Projection samples — built once per path, then reused for every waypoint. */
-const META_SAMPLE_N = 180;
+/** Path length (px) an element stays "hot" after the tip passes it. */
+const HOT_SPAN_PX = 360;
+
+const DEFAULT_MARKERS = {
+  projectsTitle: 0.2,
+  projectsZone: 0.26,
+  stackTitle: 0.4,
+  stackChips: [],
+  expTitle: 0.6,
+  expItems: [],
+  contact: 0.88,
+  contactHot: 1,
+};
 
 /** Dash pattern (pathLength=1) that only paints frontRanges up to tip progress. */
 function frontStrokeDash(tipU, frontRanges) {
@@ -161,273 +179,197 @@ const fadeUp = {
   show: { opacity: 1, y: 0 },
 };
 
-const VIEW_H = 1200;
-
-function clamp(v, min, max) {
-  return Math.min(max, Math.max(min, v));
-}
-
-/** Soft lateral S with sinusoidal envelope (no hard sign flips). */
-function snakeLateral(points) {
-  if (points.length < 2) return points;
-  const out = [points[0]];
-  for (let i = 1; i < points.length; i += 1) {
-    const a = points[i - 1];
-    const b = points[i];
-    const dx = b.x - a.x;
-    const dy = ((b.y - a.y) / VIEW_H) * 100;
-    const len = Math.hypot(dx, dy);
-    if (len >= 14 && !a.id && !b.id) {
-      const inv = len || 1;
-      const env = Math.sin(Math.PI * 0.5);
-      const amp = 1.2 * env * (i % 2 === 0 ? 1 : -1);
-      out.push({
-        x: clamp((a.x + b.x) / 2 + (-dy / inv) * amp, 8, 92),
-        y: (a.y + b.y) / 2 + ((dx / inv) * amp * VIEW_H) / 100,
-        layer: b.layer || a.layer || 'back',
-      });
-    }
-    out.push(b);
-  }
-  return out;
-}
-
-function buildRibbonD(points) {
-  if (points.length < 2) return '';
-  const waved = snakeLateral(points);
-  return roundedPath(simplifyPoints(waved, 28), { maxFrac: 0.5 });
-}
-
-/** Sample path once; nearest-u queries become cheap distance checks. */
-function buildPathSampleTable(pathEl, samples = META_SAMPLE_N) {
-  let total = 0;
-  try {
-    total = pathEl.getTotalLength();
-  } catch {
-    return null;
-  }
-  if (!total) return null;
-  const xs = new Float32Array(samples + 1);
-  const ys = new Float32Array(samples + 1);
-  for (let i = 0; i <= samples; i += 1) {
-    const p = pathEl.getPointAtLength((total * i) / samples);
-    xs[i] = p.x;
-    ys[i] = p.y;
-  }
-  return { total, samples, xs, ys };
-}
-
-function nearestUFromTable(table, pt, fromIndex = 0) {
-  if (!table) return 0;
-  const { samples, xs, ys } = table;
-  let bestI = fromIndex;
-  let bestD = Infinity;
-  for (let i = Math.max(0, fromIndex); i <= samples; i += 1) {
-    const d = Math.hypot(xs[i] - pt.x, ((ys[i] - pt.y) / VIEW_H) * 100);
-    if (d < bestD) {
-      bestD = d;
-      bestI = i;
-    }
-  }
-  return bestI / samples;
-}
-
-/** Project hard waypoints onto final SVG path for markers + frontRanges. */
-function projectMetaOntoPath(pathEl, waypoints) {
-  const markers = {
-    projectsTitle: 0.2,
-    projectsZone: 0.28,
-    stackTitle: 0.4,
-    stackChips: [],
-    expTitle: 0.55,
-    expItems: [],
-    contact: 0.85,
-    contactHot: 0.93,
-  };
-  const frontRanges = [];
-  if (!pathEl || !waypoints.length) return { markers, frontRanges };
-
-  const table = buildPathSampleTable(pathEl, META_SAMPLE_N);
-  if (!table) return { markers, frontRanges };
-
-  let frontStart = null;
-  let prevI = 0;
-  waypoints.forEach((wp) => {
-    const u = nearestUFromTable(table, wp, prevI);
-    const ordered = Math.max(prevI / table.samples, u);
-    prevI = Math.floor(ordered * table.samples);
-
-    if (wp.id === 'projectsTitle') markers.projectsTitle = ordered;
-    if (wp.id === 'projectsZone') markers.projectsZone = ordered;
-    if (wp.id === 'stackTitle') markers.stackTitle = ordered;
-    if (wp.id === 'expTitle') markers.expTitle = ordered;
-    if (wp.id === 'contact') markers.contact = ordered;
-    if (wp.id === 'contactHot') markers.contactHot = ordered;
-    if (wp.id?.startsWith('chip:')) {
-      markers.stackChips[Number(wp.id.slice(5))] = ordered;
-    }
-    if (wp.id?.startsWith('exp:')) {
-      markers.expItems[Number(wp.id.slice(4))] = ordered;
-    }
-
-    if (wp.layer === 'front') {
-      if (frontStart == null) frontStart = Math.max(0, ordered - 0.004);
-    } else if (frontStart != null) {
-      frontRanges.push([frontStart, Math.min(1, ordered + 0.004)]);
-      frontStart = null;
-    }
-  });
-  if (frontStart != null) frontRanges.push([frontStart, 1]);
-  return { markers, frontRanges };
-}
-
-/** Logo (or any el) as ellipse center/radii in path viewBox units. */
-function ellipseFromEl(pageEl, el, pad = 1.12) {
-  if (!pageEl || !el) return null;
-  const pageRect = pageEl.getBoundingClientRect();
-  const r = el.getBoundingClientRect();
-  const pageTop = pageRect.top + window.scrollY;
-  const pageLeft = pageRect.left + window.scrollX;
-  const width = Math.max(pageEl.offsetWidth, 1);
-  const height = Math.max(pageEl.offsetHeight, 1);
-  const cx = (((r.left + r.right) / 2 + window.scrollX - pageLeft) / width) * 100;
-  const cy = (((r.top + r.bottom) / 2 + window.scrollY - pageTop) / height) * VIEW_H;
-  const rx = ((r.width / 2) / width) * 100 * pad;
-  const ry = ((r.height / 2) / height) * VIEW_H * pad;
-  return { cx: clamp(cx, 12, 88), cy, rx: Math.max(rx, 6), ry: Math.max(ry, 40) };
-}
-
-/** Sample Catmull-Rom between controls so logo weave stays smooth (no elbows). */
-function densifyControls(controls, stepsPerSeg = 10) {
-  if (controls.length < 2) return controls;
-  const out = [];
-  for (let i = 0; i < controls.length - 1; i += 1) {
-    const p0 = controls[i - 1] || controls[i];
-    const p1 = controls[i];
-    const p2 = controls[i + 1];
-    const p3 = controls[i + 2] || p2;
-    for (let s = 0; s < stepsPerSeg; s += 1) {
-      const t = s / stepsPerSeg;
-      const t2 = t * t;
-      const t3 = t2 * t;
-      const x =
-        0.5 *
-        (2 * p1.x +
-          (-p0.x + p2.x) * t +
-          (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 +
-          (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3);
-      const y =
-        0.5 *
-        (2 * p1.y +
-          (-p0.y + p2.y) * t +
-          (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 +
-          (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3);
-      // Layer blends at segment start; flips with the destination control
-      const layer = t < 0.5 ? p1.layer : p2.layer;
-      out.push({ x: clamp(x, 8, 92), y, layer });
-    }
-  }
-  out.push(controls[controls.length - 1]);
-  return out;
-}
-
 /**
- * Wide S behind the card — always back, headings stay under ~60°.
+ * Whole-page route in page px:
+ *  name dot → coil around the logo card (right, behind R→L, front L→R)
+ *  → coil around "Proyectos" → snake past the carousel → coil around "Stack"
+ *  → serpentine through the chip rows → coil around "Experiencia"
+ *  → wave beside the timeline → contact card → hook up into the "?" dot.
  */
-function pushLogoWeave(list, ellipse) {
-  if (!ellipse) return;
-  const { cx, cy, rx, ry } = ellipse;
-  const at = (nx, ny) => ({
-    x: clamp(cx + nx * rx, 8, 92),
-    y: cy + ny * ry,
-    layer: 'back',
+function buildRoute(page, refs) {
+  const W = page.offsetWidth;
+  const H = page.offsetHeight;
+  if (!W || !H) return null;
+  const P = trailParams(W);
+  const xMin = P.margin;
+  const xMax = W - P.margin;
+
+  const dot = rectInPage(page, refs.origin.current);
+  if (!dot) return null;
+
+  const pts = [{ x: dot.cx, y: dot.cy, layer: 'back' }];
+  const add = (list) =>
+    list.forEach((p) => pts.push({ x: clamp(p.x, 4, W - 4), y: p.y, layer: p.layer || 'back' }));
+  const last = () => pts[pts.length - 1];
+
+  const coilAround = (
+    r,
+    { aScale = 1, pad = 0, bFrac, minB = 0, driftFrac, steps, roundness, edge = P.margin }
+  ) => {
+    const lo = edge;
+    const hi = W - edge;
+    const maxHalf = (hi - lo) / 2;
+    const half = Math.min(Math.max((r.w / 2) * aScale + pad, r.w / 2 + 8), maxHalf);
+    const cx = clamp(r.cx, lo + half, hi - half);
+    const drift = r.h * driftFrac;
+    const b = Math.max(r.h * bFrac, minB);
+    return coil({ cx, cy: r.cy - drift / 2, a: half, b, drift, steps, roundness });
+  };
+
+  // Vertical-tangent cubic from the last point to `to` (leave down, arrive down),
+  // with a sinusoidal sideways sway on long gaps.
+  const connect = (to, { snake = true } = {}) => {
+    const from = last();
+    const gap = to.y - from.y;
+    if (gap < 30) return;
+    const n = Math.max(6, Math.round(gap / 40));
+    const curve = cubicPoints(
+      from,
+      { x: from.x, y: from.y + gap * 0.42 },
+      { x: to.x, y: to.y - gap * 0.42 },
+      to,
+      n
+    );
+    const waves = Math.max(1, Math.round(gap / P.snakeWave));
+    const sway = snake && gap > P.snakeWave * 0.6 ? P.snakeAmp : 0;
+    add(
+      curve.slice(1, -1).map((p, i) => {
+        const t = (i + 1) / n;
+        return { ...p, x: p.x + sway * Math.sin(Math.PI * waves * t) * Math.sin(Math.PI * t) };
+      })
+    );
+  };
+
+  const ringTitle = (el) => {
+    const t = textRectInPage(page, el);
+    if (!t) return null;
+    const ring = coilAround(t, {
+      pad: P.ringPad,
+      bFrac: 0.62,
+      minB: 22,
+      driftFrac: 0.7,
+      steps: 64,
+      roundness: 0.72,
+      edge: 4,
+    });
+    connect(ring[0]);
+    add(ring);
+    return t;
+  };
+
+  // Hero: over the top of the card, down its right side, then one coil
+  const logo = rectInPage(page, refs.logo.current);
+  if (logo) {
+    const ring = coilAround(logo, { aScale: P.logoA, bFrac: 0.38, driftFrac: 0.28, steps: 72 });
+    const r0 = ring[0];
+    const start = pts[0];
+    add(
+      cubicPoints(
+        start,
+        { x: start.x + (r0.x - start.x) * 0.5, y: Math.min(start.y, logo.top - logo.h * 0.18) },
+        { x: r0.x, y: r0.y - logo.h * 0.55 },
+        r0,
+        18
+      ).slice(1, -1)
+    );
+    add(ring);
+  }
+
+  const targets = {};
+  targets.projectsTitle = ringTitle(refs.projectsTitle.current);
+  targets.projectsZone = rectInPage(page, refs.projects.current);
+  targets.stackTitle = ringTitle(refs.stackTitle.current);
+
+  // Stack: horizontal passes through the gutters between chip rows,
+  // joined by round U-turns at the sides (boustrophedon snake).
+  const chipEls = refs.skillChips.current || [];
+  targets.chips = chipEls.map((el) => rectInPage(page, el));
+  const chipRects = targets.chips.filter(Boolean);
+  if (chipRects.length) {
+    const rows = [];
+    [...chipRects]
+      .sort((m, n) => m.top - n.top)
+      .forEach((r) => {
+        const row = rows.find((x) => Math.abs(x.top - r.top) < 12);
+        if (row) {
+          row.left = Math.min(row.left, r.left);
+          row.right = Math.max(row.right, r.right);
+          row.bottom = Math.max(row.bottom, r.bottom);
+        } else {
+          rows.push({ top: r.top, bottom: r.bottom, left: r.left, right: r.right });
+        }
+      });
+    const gl = Math.min(...rows.map((r) => r.left));
+    const gr = Math.max(...rows.map((r) => r.right));
+    const gutters = [rows[0].top - 12];
+    for (let i = 0; i < rows.length - 1; i += 1) {
+      gutters.push((rows[i].bottom + rows[i + 1].top) / 2);
+    }
+    gutters.push(rows[rows.length - 1].bottom + 14);
+
+    let ltr = last().x < (gl + gr) / 2;
+    gutters.forEach((gy, i) => {
+      const next = gutters[i + 1];
+      const turnR = next != null ? (next - gy) / 2 : 0;
+      const left = gl + turnR;
+      const right = gr - turnR;
+      const xa = i === 0 ? clamp(last().x, left, right) : ltr ? left : right;
+      const xb = ltr ? right : left;
+      add([
+        { x: xa, y: gy },
+        { x: (xa + xb) / 2, y: gy },
+        { x: xb, y: gy },
+      ]);
+      if (next != null) {
+        const dir = ltr ? 1 : -1;
+        const cy = gy + turnR;
+        for (let k = 1; k < 8; k += 1) {
+          const phi = (Math.PI * k) / 8;
+          add([{ x: xb + dir * turnR * Math.sin(phi), y: cy - turnR * Math.cos(phi) }]);
+        }
+      }
+      ltr = !ltr;
+    });
+  }
+
+  targets.expTitle = ringTitle(refs.expTitle.current);
+
+  // Experiencia: gentle wave beside the cards (out ↔ in on the right edge)
+  const expEls = refs.expItems.current || [];
+  targets.expItems = expEls.map((el) => rectInPage(page, el));
+  targets.expItems.filter(Boolean).forEach((r, i) => {
+    const out = Math.min(r.right + P.expOut, xMax);
+    const inn = r.right - r.w * 0.16;
+    const x = i % 2 === 0 ? out : inn;
+    if (i === 0) connect({ x, y: r.top }, { snake: false });
+    add([{ x, y: r.cy }]);
   });
 
-  const controls = [
-    at(-1.15, 0.0),
-    at(-0.35, 0.22),
-    at(0.45, 0.42),
-    at(1.05, 0.62),
-    at(0.45, 0.82),
-    at(-0.25, 1.02),
-    at(-0.7, 1.28),
-    at(-0.35, 1.58),
-  ];
-
-  densifyControls(controls, 4).forEach((p) => pushWp(list, p, 'back'));
-}
-
-function fallbackPathFromOrigin(origin) {
-  const x = clamp(origin?.x ?? 28, 10, 70);
-  const y = origin?.y ?? 160;
-  return buildRibbonD([
-    { x, y },
-    { x: x + 14, y: y + 160 },
-    { x: 62, y: y + 300 },
-    { x: 48, y: y + 440 },
-    { x: 28, y: y + 580 },
-    { x: 58, y: y + 720 },
-    { x: 42, y: y + 860 },
-    { x: 55, y: y + 1000 },
-    { x: 46, y: 1185 },
-  ]);
-}
-
-function pointFromEl(pageEl, el, anchor = 'center', nudge = null) {
-  if (!pageEl || !el) return null;
-  const pageRect = pageEl.getBoundingClientRect();
-  const r = el.getBoundingClientRect();
-  const pageTop = pageRect.top + window.scrollY;
-  const pageLeft = pageRect.left + window.scrollX;
-  const width = Math.max(pageEl.offsetWidth, 1);
-  const height = Math.max(pageEl.offsetHeight, 1);
-
-  let ox;
-  let oy;
-  if (anchor === 'right') {
-    ox = r.right + window.scrollX - pageLeft - 12;
-    oy = r.top + window.scrollY + r.height * 0.45 - pageTop;
-  } else if (anchor === 'left') {
-    ox = r.left + window.scrollX - pageLeft + 12;
-    oy = r.top + window.scrollY + r.height * 0.5 - pageTop;
-  } else if (anchor === 'top') {
-    ox = r.left + window.scrollX + r.width * 0.5 - pageLeft;
-    oy = r.top + window.scrollY - pageTop + 8;
-  } else if (anchor === 'bottom') {
-    ox = r.left + window.scrollX + r.width * 0.5 - pageLeft;
-    oy = r.bottom + window.scrollY - pageTop - 8;
-  } else if (anchor === 'topLeft') {
-    ox = r.left + window.scrollX - pageLeft + 8;
-    oy = r.top + window.scrollY - pageTop + 8;
-  } else if (anchor === 'topRight') {
-    ox = r.right + window.scrollX - pageLeft - 8;
-    oy = r.top + window.scrollY - pageTop + 8;
-  } else if (anchor === 'bottomRight') {
-    ox = r.right + window.scrollX - pageLeft - 8;
-    oy = r.bottom + window.scrollY - pageTop - 8;
-  } else if (anchor === 'bottomLeft') {
-    ox = r.left + window.scrollX - pageLeft + 8;
-    oy = r.bottom + window.scrollY - pageTop - 8;
-  } else {
-    ox = r.left + window.scrollX + r.width * 0.5 - pageLeft;
-    oy = r.top + window.scrollY + r.height * 0.5 - pageTop;
+  // Contacto: down the card's right side, under the "?", up into the dot
+  const card = rectInPage(page, refs.contact.current);
+  const markR = rectInPage(page, refs.contactMark.current);
+  targets.contact = card;
+  if (card && markR) {
+    const mark = { x: markR.cx, y: markR.cy };
+    const depth = clamp(card.bottom - 14 - mark.y, 30, 120) * P.hook;
+    const side = Math.min(card.right - card.w * 0.04, xMax);
+    const entry = { x: side, y: card.top + card.h * 0.12 };
+    connect(entry, { snake: false });
+    add([entry]);
+    // One J-curve: down the side, under the "?", rising vertically into the dot
+    const hook = cubicPoints(
+      entry,
+      { x: side, y: mark.y + depth * 0.9 },
+      { x: mark.x, y: mark.y + depth * 1.35 },
+      mark,
+      28
+    );
+    add(hook.slice(1).map((p, i) => ({ ...p, layer: i > 14 ? 'front' : 'back' })));
+  } else if (card) {
+    connect({ x: card.right, y: card.cy });
   }
 
-  const pt = {
-    x: (ox / width) * 100,
-    y: (oy / height) * VIEW_H,
-  };
-  if (nudge) {
-    pt.x += nudge.x || 0;
-    pt.y += nudge.y || 0;
-  }
-  pt.x = clamp(pt.x, 8, 92);
-  return pt;
-}
-
-function pushWp(list, pt, layer = 'back', id = null) {
-  if (!pt) return;
-  list.push({ x: pt.x, y: pt.y, layer, id });
+  return { points: pts, targets, W, H, P };
 }
 
 function Section({ children, className = '', id, tone = 'light', sectionRef }) {
@@ -463,7 +405,7 @@ function MotionBlock({ children, className }) {
   );
 }
 
-function ScrollAtmosphere({ pageRef, refs, onProgress, expCount, skillCount }) {
+function ScrollAtmosphere({ pageRef, refs, onProgress }) {
   const reduce = useReducedMotion();
   const baseRef = useRef(null);
   const layerRefs = useRef([]);
@@ -473,214 +415,86 @@ function ScrollAtmosphere({ pageRef, refs, onProgress, expCount, skillCount }) {
   const headFrontRef = useRef(null);
   const tipProgressRef = useRef(0);
   const tipVelRef = useRef(0);
-  const tipTableRef = useRef(null);
+  const trackRef = useRef(null);
+  const kickRef = useRef(null);
   const litEmitAtRef = useRef(0);
-  const pendingMetaRef = useRef([]);
-  const pathMetaRef = useRef({
-    markers: {
-      projectsTitle: 0.2,
-      projectsZone: 0.28,
-      stackTitle: 0.4,
-      stackChips: [],
-      expTitle: 0.55,
-      expItems: [],
-      contact: 0.85,
-      contactHot: 0.93,
-    },
-    frontRanges: [],
-  });
-  const [ribbonPath, setRibbonPath] = useState(() => fallbackPathFromOrigin({ x: 28, y: 180 }));
+  const metaRef = useRef({ markers: DEFAULT_MARKERS, frontRanges: [], hotDu: 0.03 });
+  const [ribbon, setRibbon] = useState({ d: '', w: 100, h: 100, stroke: 1 });
 
   const measure = useCallback(() => {
     const page = pageRef.current;
     if (!page) return;
+    const route = buildRoute(page, refs);
+    if (!route) return;
+    const spline = buildSpline(route.points);
+    if (!spline) return;
+    const track = buildTrack(spline);
+    const passed = (r) => passU(track, r, route.P.litRadius);
+    const t = route.targets;
 
-    const originEl = refs.origin.current;
-    const logoEl = refs.logo.current;
-    const projectsEl = refs.projects.current;
-    const projectsTitleEl = refs.projectsTitle.current;
-    const stackEl = refs.stack.current;
-    const stackTitleEl = refs.stackTitle.current;
-    const expTitleEl = refs.expTitle.current;
-    const contactEl = refs.contact.current;
-    const contactMarkEl = refs.contactMark.current;
-    const expItems = (refs.expItems.current || []).filter(Boolean);
-    const skillChips = (refs.skillChips.current || []).filter(Boolean);
+    trackRef.current = track;
+    metaRef.current = {
+      frontRanges: frontRangesOf(spline),
+      hotDu: HOT_SPAN_PX / Math.max(spline.total, 1),
+      markers: {
+        projectsTitle: passed(t.projectsTitle),
+        projectsZone: passed(t.projectsZone),
+        stackTitle: passed(t.stackTitle),
+        stackChips: t.chips.map((r) => (r ? passed(r) : null)),
+        expTitle: passed(t.expTitle),
+        expItems: t.expItems.map((r) => (r ? passed(r) : null)),
+        contact: passed(t.contact),
+        contactHot: 1,
+      },
+    };
 
-    const hard = [];
-    const start = pointFromEl(page, originEl, 'center');
-    pushWp(hard, start, 'back', 'origin');
-
-    // Hero: weave through logo like annotation (behind → across face → loop → out)
-    const logoEllipse = ellipseFromEl(page, logoEl, 1.0);
-    if (logoEllipse && start) {
-      // Flat approach: keep Y near the name-dot → logo mid (no upward spike)
-      const targetY = logoEllipse.cy + logoEllipse.ry * 0.12;
-      pushWp(
-        hard,
-        {
-          x: start.x * 0.55 + (logoEllipse.cx - logoEllipse.rx * 1.2) * 0.45,
-          y: start.y * 0.7 + targetY * 0.3,
-        },
-        'back'
-      );
-      pushWp(
-        hard,
-        {
-          x: clamp(logoEllipse.cx - logoEllipse.rx * 1.15, 8, 92),
-          y: start.y * 0.25 + targetY * 0.75,
-        },
-        'back'
-      );
-      pushLogoWeave(hard, logoEllipse);
-    } else if (start) {
-      pushWp(hard, { x: start.x + 18, y: start.y + 80 }, 'back');
-      pushWp(hard, { x: start.x + 28, y: start.y + 140 }, 'back');
-    }
-
-    // Soft bridge into Proyectos — carry the exit tangent, then ease (no V)
-    const logoExit = hard[hard.length - 1];
-    const titleP = pointFromEl(page, projectsTitleEl, 'left', { x: -2, y: 0 });
-    if (logoExit && titleP) {
-      const prev = hard[hard.length - 2] || logoExit;
-      const tx = logoExit.x - prev.x;
-      const ty = Math.max(logoExit.y - prev.y, 0.4);
-      const span = Math.max(titleP.y - logoExit.y, 1);
-      const steps = 6;
-      for (let s = 1; s <= steps; s += 1) {
-        const t = s / (steps + 1);
-        const ease = t * t * (3 - 2 * t);
-        pushWp(
-          hard,
-          {
-            x: logoExit.x + tx * (1 - t) * 2.2 + (titleP.x - logoExit.x) * ease,
-            y: logoExit.y + ty * (1 - t) * 0.6 + span * t,
-          },
-          'back'
-        );
-      }
-    }
-    pushWp(hard, titleP, 'back', 'projectsTitle');
-    if (titleP) {
-      pushWp(hard, { x: clamp(titleP.x + 14, 20, 70), y: titleP.y + 10 }, 'back');
-      pushWp(hard, { x: clamp(titleP.x + 28, 40, 82), y: titleP.y + 28 }, 'back');
-    }
-
-    const proj = pointFromEl(page, projectsEl, 'center');
-    if (proj) {
-      pushWp(hard, { x: clamp(proj.x + 22, 55, 86), y: proj.y - 40 }, 'back', 'projectsZone');
-      pushWp(hard, { x: clamp(proj.x + 28, 58, 88), y: proj.y }, 'back');
-      pushWp(hard, { x: clamp(proj.x + 18, 50, 84), y: proj.y + 50 }, 'back');
-      pushWp(hard, { x: clamp(proj.x + 8, 40, 72), y: proj.y + 95 }, 'back');
-    }
-
-    // Stack: title then weave across chips
-    const stackTitle = pointFromEl(page, stackTitleEl, 'left', { x: -2 });
-    pushWp(hard, stackTitle, 'back', 'stackTitle');
-    if (stackTitle) {
-      pushWp(hard, { x: clamp(stackTitle.x + 14, 18, 50), y: stackTitle.y + 28 }, 'back');
-    }
-
-    // Stack: one soft diagonal per row (entry → exit), not one point per chip
-    const chipMarkers = [];
-    if (skillChips.length) {
-      const rows = new Map();
-      skillChips.forEach((el, i) => {
-        const row = Math.floor(i / 6);
-        if (!rows.has(row)) rows.set(row, []);
-        rows.get(row).push({ el, i });
-        const c = pointFromEl(page, el, 'center');
-        if (c) chipMarkers.push({ ...c, layer: 'back', id: `chip:${i}` });
-      });
-      rows.forEach((items) => {
-        const first = items[0];
-        const last = items[items.length - 1];
-        pushWp(
-          hard,
-          pointFromEl(page, first.el, 'left', { x: -2, y: -6 }),
-          'back'
-        );
-        pushWp(
-          hard,
-          pointFromEl(page, last.el, 'right', { x: 2, y: 8 }),
-          'back'
-        );
-      });
-    } else {
-      const stk = pointFromEl(page, stackEl, 'left', { x: 10 });
-      pushWp(hard, stk, 'back');
-    }
-
-    // Experiencia: one smooth vertical flow down the right (no zig-zag cuts)
-    const expTitle = pointFromEl(page, expTitleEl, 'left', { x: -2 });
-    pushWp(hard, expTitle, 'back', 'expTitle');
-    if (expTitle) {
-      pushWp(hard, { x: clamp(expTitle.x + 28, 48, 82), y: expTitle.y + 20 }, 'back');
-    }
-
-    expItems.forEach((el, i) => {
-      const sway = (i % 2 === 0 ? 1 : -1) * 3;
-      pushWp(
-        hard,
-        pointFromEl(page, el, 'right', { x: 8 + sway, y: 0 }),
-        'back',
-        `exp:${i}`
-      );
-    });
-
-    // Contacto: soft approach → period mark (still one continuous ribbon)
-    const contact = pointFromEl(page, contactEl, 'top', { y: -8 });
-    pushWp(hard, contact, 'back', 'contact');
-    if (contact) {
-      pushWp(hard, { x: clamp(contact.x + 12, 36, 78), y: contact.y + 40 }, 'back');
-      pushWp(hard, { x: clamp(contact.x + 8, 32, 72), y: contact.y + 90 }, 'front');
-      pushWp(hard, { x: clamp(contact.x + 4, 30, 68), y: contact.y + 130 }, 'front');
-    }
-
-    const mark = pointFromEl(page, contactMarkEl, 'center');
-    pushWp(hard, mark || (contact ? { x: contact.x + 10, y: contact.y + 165 } : null), 'front', 'contactHot');
-
-    const coords = hard.map(({ x, y, layer, id }) => ({ x, y, layer, id }));
-    const next =
-      coords.length >= 2
-        ? buildRibbonD(coords)
-        : fallbackPathFromOrigin(start || { x: 28, y: 180 });
-
-    // Path geometry + markers for later projection onto the live SVG path
-    pendingMetaRef.current = [...coords, ...chipMarkers];
-    setRibbonPath((prev) => {
-      if (prev === next) {
-        // Layout shifted but d-string identical — cheap table-based reproject
-        if (baseRef.current) {
-          pathMetaRef.current = projectMetaOntoPath(
-            baseRef.current,
-            pendingMetaRef.current
-          );
-        }
-        return prev;
-      }
-      return next;
-    });
+    setRibbon((prev) =>
+      prev.d === spline.d && prev.w === route.W && prev.h === route.H
+        ? prev
+        : { d: spline.d, w: route.W, h: route.H, stroke: route.P.strokeScale }
+    );
+    kickRef.current?.();
   }, [pageRef, refs]);
 
+  // Re-measure on resize, font load and any page height change (images, carousel)
   useEffect(() => {
     measure();
     const id = requestAnimationFrame(measure);
-    const timers = [120, 500].map((ms) => window.setTimeout(measure, ms));
+    const timers = [120, 500, 1200].map((ms) => window.setTimeout(measure, ms));
     let resizeTimer = 0;
-    const onResize = () => {
+    const later = () => {
       window.clearTimeout(resizeTimer);
       resizeTimer = window.setTimeout(measure, 120);
     };
-    window.addEventListener('resize', onResize);
+    window.addEventListener('resize', later);
+    window.addEventListener('orientationchange', later);
     document.fonts?.ready?.then?.(measure);
+
+    const page = pageRef.current;
+    let lastW = page?.offsetWidth || 0;
+    let lastH = page?.offsetHeight || 0;
+    const ro =
+      typeof ResizeObserver !== 'undefined' && page
+        ? new ResizeObserver(() => {
+            const w = page.offsetWidth;
+            const h = page.offsetHeight;
+            if (Math.abs(h - lastH) < 2 && Math.abs(w - lastW) < 2) return;
+            lastW = w;
+            lastH = h;
+            later();
+          })
+        : null;
+    if (ro && page) ro.observe(page);
+
     return () => {
       cancelAnimationFrame(id);
       timers.forEach(clearTimeout);
       window.clearTimeout(resizeTimer);
-      window.removeEventListener('resize', onResize);
+      window.removeEventListener('resize', later);
+      window.removeEventListener('orientationchange', later);
+      ro?.disconnect();
     };
-  }, [measure]);
+  }, [measure, pageRef]);
 
   const { scrollYProgress } = useScroll({
     target: pageRef,
@@ -700,56 +514,37 @@ function ScrollAtmosphere({ pageRef, refs, onProgress, expCount, skillCount }) {
 
   const emitProgress = useCallback(
     (tipP) => {
-      const m = pathMetaRef.current.markers;
-      const count = Math.max(expCount, 1);
-      const skills = Math.max(skillCount, 1);
+      const { markers: m, hotDu } = metaRef.current;
+      const passedAll = (list) =>
+        list.reduce((acc, u, i) => (u != null && tipP >= u ? [...acc, i] : acc), []);
+      const hottest = (list) => {
+        let best = -1;
+        list.forEach((u, i) => {
+          if (u != null && tipP >= u && tipP < u + hotDu) best = i;
+        });
+        return best;
+      };
 
-      const projects = tipP >= m.projectsTitle - 0.02;
-      const projectsHot = tipP >= m.projectsTitle && tipP < (m.stackTitle || 0.4);
-      const projectsTitle = tipP >= m.projectsTitle - 0.01 && tipP < m.projectsZone + 0.08;
-
-      const stack = tipP >= m.stackTitle - 0.02;
-      const stackHot = tipP >= m.stackTitle && tipP < (m.expTitle || 0.55);
-      const stackTitle = tipP >= m.stackTitle - 0.01 && tipP < (m.stackChips[0] ?? m.stackTitle + 0.08);
-
-      const skillActive = [];
-      let skillHot = -1;
-      for (let i = 0; i < skills; i += 1) {
-        const u = m.stackChips[i];
-        if (u == null) continue;
-        if (tipP >= u - 0.005) skillActive.push(i);
-        if (tipP >= u - 0.01 && tipP < u + 0.04) skillHot = i;
-      }
-
-      const expTitle = tipP >= m.expTitle - 0.01 && tipP < (m.expItems[0] ?? m.expTitle + 0.08);
-      const expActive = [];
-      let expHot = -1;
-      for (let i = 0; i < count; i += 1) {
-        const u = m.expItems[i] ?? m.expTitle + ((i + 1) / (count + 1)) * (m.contact - m.expTitle);
-        if (tipP >= u - 0.01) expActive.push(i);
-        if (tipP >= u - 0.015 && tipP < u + 0.05) expHot = i;
-      }
-
-      const contact = tipP >= m.contact - 0.02;
-      const contactHot = tipP >= m.contactHot - 0.02;
+      const contactSpan = Math.max(m.contactHot - m.contact, 0.01);
 
       onProgress?.({
-        projects,
-        projectsHot,
-        projectsTitle,
-        stack,
-        stackHot,
-        stackTitle,
-        skillActive,
-        skillHot,
-        expTitle,
-        expActive,
-        expHot,
-        contact,
-        contactHot,
+        projects: tipP >= m.projectsTitle,
+        projectsHot: tipP >= m.projectsZone && tipP < m.stackTitle,
+        projectsTitle: tipP >= m.projectsTitle && tipP < m.stackTitle,
+        stack: tipP >= m.stackTitle,
+        stackHot: tipP >= m.stackTitle && tipP < m.expTitle,
+        stackTitle: tipP >= m.stackTitle && tipP < m.expTitle,
+        skillActive: passedAll(m.stackChips),
+        skillHot: hottest(m.stackChips),
+        expTitle: tipP >= m.expTitle && tipP < m.contact,
+        expActive: passedAll(m.expItems),
+        expHot: hottest(m.expItems),
+        contact: tipP >= m.contact,
+        contactHot: tipP >= m.contactHot - 0.002,
+        qMarkAssemble: clamp((tipP - m.contact) / contactSpan, 0, 1),
       });
     },
-    [expCount, skillCount, onProgress]
+    [onProgress]
   );
 
   useEffect(() => {
@@ -759,62 +554,27 @@ function ScrollAtmosphere({ pageRef, refs, onProgress, expCount, skillCount }) {
     const frontLayers = frontLayerRefs.current;
     const headBack = headBackRef.current;
     const headFront = headFrontRef.current;
-    const svg = base?.ownerSVGElement;
-    if (!base || !ribbonPath || !svg) return;
+    if (!base) return undefined;
 
-    let total = 0;
-    try {
-      total = base.getTotalLength();
-    } catch {
-      return;
-    }
-    if (!total) return;
-
-    // Project section markers / frontRanges onto the live path
-    pathMetaRef.current = projectMetaOntoPath(base, pendingMetaRef.current);
-
-    const rebuildTipTable = () => {
-      const rect = svg.getBoundingClientRect();
-      const page = pageRef.current;
-      const pageTop = page
-        ? page.getBoundingClientRect().top + window.scrollY
-        : 0;
-      // preserveAspectRatio="none" → independent X/Y scale into page px
-      const scaleX = rect.width / 100;
-      const scaleY = rect.height / VIEW_H;
-      const top = rect.top + window.scrollY - pageTop;
-      tipTableRef.current = buildTipTable(base, {
-        scaleX,
-        scaleY,
-        top,
-        samples: TIP_SAMPLE_N,
-      });
-      try {
-        total = base.getTotalLength();
-      } catch {
-        /* keep previous */
-      }
-    };
-    rebuildTipTable();
-
+    // Scroll → path progress. The viewport anchor starts at the name dot,
+    // settles at TIP_VIEW_ANCHOR and slides lower near the end so the tip
+    // reaches the "?" exactly when the page bottoms out.
     const readTarget = () => {
-      const originEl = refs.origin?.current;
-      const originRect = originEl?.getBoundingClientRect();
-      const releaseY = window.innerHeight * 0.22;
-      if (!originRect || originRect.top + originRect.height / 2 >= releaseY) {
-        return 0;
-      }
-      const table = tipTableRef.current;
-      if (!table) return tipProgressRef.current;
-      const key = window.scrollY + TIP_VIEW_ANCHOR * window.innerHeight;
-      let u = table.progressForKey(key);
-      const maxScroll = Math.max(
-        document.documentElement.scrollHeight - window.innerHeight,
-        1
-      );
-      const scrollP = clamp(window.scrollY / maxScroll, 0, 1);
-      if (scrollP > 0.92) u = Math.max(u, (scrollP - 0.92) / 0.08);
-      return clamp(u, 0, 1);
+      const track = trackRef.current;
+      const page = pageRef.current;
+      if (!track || !page) return 0;
+      const vh = Math.max(window.innerHeight, 1);
+      const s = window.scrollY;
+      const pageTop = page.getBoundingClientRect().top + s;
+      const maxScroll = Math.max(document.documentElement.scrollHeight - vh, 1);
+      if (s >= maxScroll - 2) return 1;
+      const k0 = track.keys[0] + pageTop;
+      const kN = track.keys[track.samples] + pageTop;
+      const aStart = clamp(k0 / vh - 0.02, 0.05, TIP_VIEW_ANCHOR);
+      const aEnd = clamp((kN - maxScroll) / vh + 0.02, TIP_VIEW_ANCHOR, 0.98);
+      const mid = aStart + (TIP_VIEW_ANCHOR - aStart) * smoothstep(0, vh * 0.5, s);
+      const anchor = mid + (aEnd - mid) * smoothstep(maxScroll - vh * 1.5, maxScroll, s);
+      return track.progressForKey(s + anchor * vh - pageTop);
     };
 
     let target = readTarget();
@@ -829,49 +589,29 @@ function ScrollAtmosphere({ pageRef, refs, onProgress, expCount, skillCount }) {
       el.style.visibility = on ? 'visible' : 'hidden';
     };
 
-    let pageW = Math.max(pageRef.current?.offsetWidth || 0, 1);
-    let pageH = Math.max(pageRef.current?.offsetHeight || 0, 1);
-    const refreshPageSize = () => {
-      pageW = Math.max(pageRef.current?.offsetWidth || 0, 1);
-      pageH = Math.max(pageRef.current?.offsetHeight || 0, 1);
-    };
-
-    const placeHead = (el, xPct, yPct, on) => {
+    const placeHead = (el, x, y, on) => {
       if (!el) return;
       el.style.left = '0';
       el.style.top = '0';
       el.style.margin = '0';
-      el.style.transform = `translate3d(${(xPct / 100) * pageW}px, ${(yPct / 100) * pageH}px, 0) translate(-50%, -50%)`;
+      el.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
       setVis(el, on);
     };
 
-    const headFromOrigin = () => {
-      const page = pageRef.current;
-      const originEl = refs.origin?.current;
-      if (!page || !originEl) return null;
-      const pageRect = page.getBoundingClientRect();
-      const r = originEl.getBoundingClientRect();
-      const pageW = Math.max(page.offsetWidth, 1);
-      const pageH = Math.max(page.offsetHeight, 1);
-      const x =
-        (((r.left + r.right) / 2 + window.scrollX - (pageRect.left + window.scrollX)) /
-          pageW) *
-        100;
-      const y =
-        (((r.top + r.bottom) / 2 + window.scrollY - (pageRect.top + window.scrollY)) /
-          pageH) *
-        100;
-      return { x, y };
+    const originPoint = () => {
+      const r = rectInPage(pageRef.current, refs.origin?.current);
+      return r ? { x: r.cx, y: r.cy } : null;
     };
 
     const render = () => {
-      const atOrigin = current < 0.0015;
+      const track = trackRef.current;
+      const { frontRanges, markers } = metaRef.current;
+      const atOrigin = !track || current < 0.0015;
       const u = atOrigin ? 0 : current;
-      const frontRanges = pathMetaRef.current.frontRanges || [];
       const tipOnFront = !atOrigin && frontRanges.some(([a, b]) => current >= a && current <= b);
 
       base.setAttribute('stroke-dasharray', `${Math.max(u, 0.0004)} 1`);
-      setVis(base, true);
+      setVis(base, !atOrigin);
 
       const tailLen = atOrigin ? 0 : Math.min(tail, u);
       layers.forEach((el, i) => {
@@ -904,15 +644,12 @@ function ScrollAtmosphere({ pageRef, refs, onProgress, expCount, skillCount }) {
         setVis(el, true);
       });
 
-      let headPct = atOrigin ? headFromOrigin() : null;
-      if (!headPct) {
-        const table = tipTableRef.current;
-        const p = table?.pointAt?.(u) || { x: 0, y: 0 };
-        headPct = { x: p.x, y: (p.y / VIEW_H) * 100 };
-      }
+      const head = (atOrigin ? originPoint() : track.pointAt(u)) || { x: 0, y: 0 };
 
-      placeHead(headBack, headPct.x, headPct.y, atOrigin || !tipOnFront);
-      placeHead(headFront, headPct.x, headPct.y, tipOnFront);
+      // When the tip reaches the period slot, the local bolita takes over
+      const tipBecomesDot = current >= (markers.contactHot ?? 1) - 0.004;
+      placeHead(headBack, head.x, head.y, !tipBecomesDot && (atOrigin || !tipOnFront));
+      placeHead(headFront, head.x, head.y, tipOnFront && !tipBecomesDot);
 
       tipProgressRef.current = current;
       tipVelRef.current = vel;
@@ -927,7 +664,7 @@ function ScrollAtmosphere({ pageRef, refs, onProgress, expCount, skillCount }) {
         current = target;
         vel = 0;
       } else {
-        const s = smoothDamp(current, target, vel, 0.35, dt, 0.9);
+        const s = smoothDamp(current, target, vel, 0.22, dt, 1.6);
         current = s.value;
         vel = s.velocity;
       }
@@ -957,16 +694,7 @@ function ScrollAtmosphere({ pageRef, refs, onProgress, expCount, skillCount }) {
       lastT = performance.now();
       if (raf === null) raf = requestAnimationFrame(tick);
     };
-
-    let resizeTimer = 0;
-    const onResize = () => {
-      window.clearTimeout(resizeTimer);
-      resizeTimer = window.setTimeout(() => {
-        refreshPageSize();
-        rebuildTipTable();
-        kick();
-      }, 100);
-    };
+    kickRef.current = kick;
 
     render();
     emitProgress(current);
@@ -979,22 +707,23 @@ function ScrollAtmosphere({ pageRef, refs, onProgress, expCount, skillCount }) {
       }
       kick();
     });
+    window.addEventListener('scroll', kick, { passive: true });
 
-    window.addEventListener('resize', onResize);
     return () => {
       unsub();
-      window.removeEventListener('resize', onResize);
-      window.clearTimeout(resizeTimer);
+      window.removeEventListener('scroll', kick);
+      kickRef.current = null;
       if (raf !== null) cancelAnimationFrame(raf);
     };
-  }, [ribbonPath, reduce, scrollYProgress, emitProgress, pageRef, refs]);
+  }, [reduce, scrollYProgress, emitProgress, pageRef, refs]);
 
   const trailSvgProps = {
     className: styles.trailSvg,
-    viewBox: `0 0 100 ${VIEW_H}`,
+    viewBox: `0 0 ${ribbon.w} ${ribbon.h}`,
     preserveAspectRatio: 'none',
     'aria-hidden': true,
   };
+  const sw = (w) => w * ribbon.stroke;
 
   return (
     <>
@@ -1017,12 +746,12 @@ function ScrollAtmosphere({ pageRef, refs, onProgress, expCount, skillCount }) {
         <svg {...trailSvgProps}>
           <path
             ref={baseRef}
-            d={ribbonPath}
+            d={ribbon.d}
             pathLength={1}
             fill="none"
             stroke={TRAIL_COLOR}
             strokeOpacity="0.5"
-            strokeWidth={TRAIL_BASE_W}
+            strokeWidth={sw(TRAIL_BASE_W)}
             strokeLinecap="round"
             strokeLinejoin="round"
           />
@@ -1033,12 +762,12 @@ function ScrollAtmosphere({ pageRef, refs, onProgress, expCount, skillCount }) {
                 ref={(el) => {
                   layerRefs.current[i] = el;
                 }}
-                d={ribbonPath}
+                d={ribbon.d}
                 pathLength={1}
                 fill="none"
                 stroke={TRAIL_COLOR}
                 strokeOpacity={l.o}
-                strokeWidth={l.w}
+                strokeWidth={sw(l.w)}
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
@@ -1052,12 +781,12 @@ function ScrollAtmosphere({ pageRef, refs, onProgress, expCount, skillCount }) {
         <svg {...trailSvgProps} className={`${styles.trailSvg} ${styles.trailSvgFront}`}>
           <path
             ref={frontBaseRef}
-            d={ribbonPath}
+            d={ribbon.d}
             pathLength={1}
             fill="none"
             stroke={TRAIL_COLOR}
             strokeOpacity="0.7"
-            strokeWidth={TRAIL_BASE_W}
+            strokeWidth={sw(TRAIL_BASE_W)}
             strokeLinecap="round"
             strokeLinejoin="round"
           />
@@ -1068,12 +797,12 @@ function ScrollAtmosphere({ pageRef, refs, onProgress, expCount, skillCount }) {
                 ref={(el) => {
                   frontLayerRefs.current[i] = el;
                 }}
-                d={ribbonPath}
+                d={ribbon.d}
                 pathLength={1}
                 fill="none"
                 stroke={TRAIL_COLOR}
                 strokeOpacity={l.o}
-                strokeWidth={l.w}
+                strokeWidth={sw(l.w)}
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
@@ -1133,6 +862,7 @@ export default function HomePage() {
     expHot: -1,
     contact: false,
     contactHot: false,
+    qMarkAssemble: 0,
   });
 
   const onProgress = useCallback((next) => {
@@ -1149,6 +879,7 @@ export default function HomePage() {
         prev.skillHot === next.skillHot &&
         prev.contact === next.contact &&
         prev.contactHot === next.contactHot &&
+        Math.abs((prev.qMarkAssemble || 0) - (next.qMarkAssemble || 0)) < 0.008 &&
         prev.expActive.length === next.expActive.length &&
         prev.expActive.every((v, i) => v === next.expActive[i]) &&
         prev.skillActive.length === next.skillActive.length &&
@@ -1175,8 +906,6 @@ export default function HomePage() {
         pageRef={pageRef}
         refs={refs}
         onProgress={onProgress}
-        expCount={profile.experience.length}
-        skillCount={profile.skills.length}
       />
 
       <section className={styles.hero}>
@@ -1345,40 +1074,48 @@ export default function HomePage() {
               </MotionBlock>
             );
           })}
-        </div>
+      </div>
       </Section>
 
       <Section id="contacto" tone="deep">
         <MotionBlock>
           <div
             ref={contactRef}
-            className={`${styles.contactBand} ${lit.contact ? styles.lit : ''} ${lit.contactHot ? styles.litHot : ''} ${lit.contactHot ? styles.litSurround : ''} ${lit.contactHot ? styles.contactWave : ''}`}
+            className={`${styles.contactBand} ${lit.contact ? styles.lit : ''} ${
+              lit.contactHot || (lit.qMarkAssemble || 0) > 0.55 ? styles.litHot : ''
+            }`}
           >
-            <h2 className={styles.contactHeadline}>
-              ¿Hablamos de tu próximo producto?
-              <span
-                ref={contactMarkRef}
-                className={`${styles.questionMark} ${lit.contactHot ? styles.questionMarkLit : ''}`}
-                aria-hidden
-              />
-            </h2>
-            <p>
-              Escríbeme por WhatsApp o LinkedIn. También puedes revisar mi CV y el código en GitHub.
-            </p>
-            <div className={styles.ctaRow}>
-              <a className="btn btn-primary" href={profile.links.whatsapp} target="_blank" rel="noreferrer">
-                WhatsApp
-              </a>
-              <a className="btn btn-ghost" href={profile.links.linkedin} target="_blank" rel="noreferrer">
-                LinkedIn
-              </a>
-              <Link className="btn btn-ghost" to="/about">
-                Más sobre mí <ArrowUpRight size={16} />
-              </Link>
+            <div className={styles.contactCopy}>
+              <h2 className={styles.contactHeadline}>
+                ¿Hablamos de tu próximo producto?
+              </h2>
+              <p>
+                Escríbeme por WhatsApp o LinkedIn. También puedes revisar mi CV y el código en GitHub.
+              </p>
+              <div className={styles.ctaRow}>
+                <a className="btn btn-primary" href={profile.links.whatsapp} target="_blank" rel="noreferrer">
+                  WhatsApp
+                </a>
+                <a className="btn btn-ghost" href={profile.links.linkedin} target="_blank" rel="noreferrer">
+                  LinkedIn
+                </a>
+                <Link className="btn btn-ghost" to="/about">
+                  Más sobre mí <ArrowUpRight size={16} />
+                </Link>
+              </div>
             </div>
+            <div className={styles.qMarkCol}>
+              <QuestionMarkParticles
+                ref={contactMarkRef}
+                progress={lit.qMarkAssemble || 0}
+                tipArrived={lit.contactHot}
+                reduce={reduce}
+                base="#f2efe8"
+              />
+          </div>         
           </div>
         </MotionBlock>
       </Section>
-    </div>
+      </div>
   );
 }

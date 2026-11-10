@@ -1,0 +1,83 @@
+.stage {
+  position: relative;
+  width: 240px;
+  height: 260px;
+  max-width: 100%;
+  margin-inline: auto;
+  pointer-events: none;
+  z-index: 3;
+  flex-shrink: 0;
+}
+
+.stageLit .mount {
+  filter: drop-shadow(0 0 12px rgba(255, 106, 61, 0.28));
+}
+
+.mount {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* Period under the gooey hook — same visual language as the trail beacon */
+.punto {
+  position: absolute;
+  left: 50%;
+  top: 78%;
+  margin: 0;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  background:
+    radial-gradient(circle, #fff 0%, #ffe0c2 22%, #ff6a3d 48%, rgba(255, 106, 61, 0.15) 70%, transparent 78%);
+  box-shadow:
+    0 0 10px 2px rgba(255, 255, 255, 0.9),
+    0 0 22px 6px rgba(255, 106, 61, 0.95),
+    0 0 48px 14px rgba(255, 138, 92, 0.55);
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s ease,
+    box-shadow 0.35s ease;
+  z-index: 4;
+}
+
+.puntoWait {
+  opacity: 0.35;
+  transform: translate(-50%, -50%) scale(0.72);
+}
+
+.puntoLit {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+  animation: puntoFlicker 2.4s ease-in-out infinite;
+}
+
+@keyframes puntoFlicker {
+  0%,
+  100% {
+    opacity: 0.9;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 979px) {
+  .stage {
+    width: 200px;
+    height: 220px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .puntoLit {
+    animation: none;
+  }
+}
