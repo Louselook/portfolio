@@ -72,25 +72,27 @@
   background: rgba(255, 138, 92, 0.18);
 }
 
-.ribbonMeasure {
+.trailSvg {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  opacity: 0;
   pointer-events: none;
+  z-index: 1;
+  overflow: visible;
+}
+
+.trailSvgFront {
   z-index: 0;
 }
 
-.wandCanvas {
+.trailFront {
+  pointer-events: none;
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1;
-  pointer-events: none;
-  /* Softens joints so the ribbon reads as one continuous stroke */
-  filter: blur(0.35px);
+  /* Above hero/logo (z:1) so “front” segments really paint over the card */
+  z-index: 4;
+  overflow: visible;
 }
 
 .beacon {
@@ -108,8 +110,8 @@
     0 0 48px 14px rgba(255, 138, 92, 0.55),
     0 0 80px 22px rgba(255, 106, 61, 0.28);
   z-index: 5;
-  animation: tipFlicker 0.9s ease-in-out infinite;
-  will-change: transform, opacity, filter;
+  animation: tipFlicker 2.4s ease-in-out infinite;
+  will-change: left, top, opacity, filter;
   pointer-events: none;
 }
 
@@ -133,28 +135,13 @@
 @keyframes tipFlicker {
   0%, 100% {
     transform: scale(1);
-    opacity: 0.88;
+    opacity: 0.92;
     filter: brightness(1);
   }
-  20% {
-    transform: scale(1.22);
+  50% {
+    transform: scale(1.08);
     opacity: 1;
-    filter: brightness(1.35);
-  }
-  40% {
-    transform: scale(0.9);
-    opacity: 0.7;
-    filter: brightness(0.9);
-  }
-  62% {
-    transform: scale(1.3);
-    opacity: 1;
-    filter: brightness(1.45);
-  }
-  80% {
-    transform: scale(1.05);
-    opacity: 0.92;
-    filter: brightness(1.1);
+    filter: brightness(1.12);
   }
 }
 
@@ -215,6 +202,97 @@
   background:
     radial-gradient(ellipse 80% 70% at 50% 40%, rgba(255, 106, 61, 0.16), transparent 70%),
     var(--surface-deep);
+}
+
+.titleLit {
+  text-shadow:
+    0 0 18px rgba(255, 106, 61, 0.55),
+    0 0 36px rgba(255, 138, 92, 0.35);
+  color: #fff5ee !important;
+}
+
+.contactHeadline {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.questionMark {
+  display: inline-block;
+  width: 0.32em;
+  height: 0.32em;
+  margin-left: 0.08em;
+  margin-bottom: 0.06em;
+  border-radius: 50%;
+  background: transparent;
+  vertical-align: baseline;
+  transition:
+    background 0.4s ease,
+    box-shadow 0.5s ease,
+    transform 0.45s ease;
+}
+
+.questionMarkLit {
+  background: #fff;
+  box-shadow:
+    0 0 10px 2px rgba(255, 255, 255, 0.95),
+    0 0 28px 8px rgba(255, 106, 61, 1),
+    0 0 64px 18px rgba(255, 138, 92, 0.55);
+  transform: scale(1.35);
+}
+
+.contactWave {
+  animation: contactWave 1.35s ease-out 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.contactWave::after {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at 72% 18%,
+    rgba(255, 106, 61, 0.45),
+    rgba(255, 106, 61, 0.12) 35%,
+    transparent 62%
+  );
+  animation: contactWaveRipple 1.35s ease-out 1;
+}
+
+@keyframes contactWave {
+  0% {
+    box-shadow:
+      0 0 0 0 rgba(255, 106, 61, 0.55),
+      0 0 24px rgba(255, 106, 61, 0.2);
+  }
+  55% {
+    box-shadow:
+      0 0 0 18px rgba(255, 106, 61, 0.12),
+      0 0 72px rgba(255, 106, 61, 0.45),
+      0 0 120px rgba(255, 138, 92, 0.28);
+  }
+  100% {
+    box-shadow:
+      0 0 0 2px rgba(255, 106, 61, 0.35),
+      0 0 48px rgba(255, 106, 61, 0.4),
+      0 0 90px rgba(255, 138, 92, 0.22);
+  }
+}
+
+@keyframes contactWaveRipple {
+  0% {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.55;
+    transform: scale(1.15);
+  }
 }
 
 @keyframes dustFloat {
@@ -291,43 +369,121 @@
 
 .heroVisual {
   justify-self: center;
+  justify-items: center;
   position: relative;
+  z-index: 1;
   width: min(100%, 360px);
+  max-width: 100%;
+  margin-inline: auto;
   aspect-ratio: 1;
   display: grid;
   place-items: center;
+  overflow: visible;
 }
 
 .logoMark {
-  width: 78%;
+  position: relative;
+  z-index: 1;
+  width: min(100%, 280px);
   display: grid;
   place-items: center;
   padding: 1.5rem;
   border-radius: var(--radius-lg);
   background: var(--surface);
   border: 1px solid var(--border);
+  /* Opaque card so the back trail is truly occluded (Z wrap) */
+  isolation: isolate;
+  overflow: visible;
 }
 
 .logoMark img {
   width: 100%;
   height: auto;
   object-fit: contain;
+  position: relative;
+  z-index: 0;
 }
 
-.floatChip {
+.logoBubbles {
   position: absolute;
-  padding: 0.65rem 0.95rem;
-  border-radius: var(--radius-pill);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  font-family: var(--font-sans);
-  font-weight: 500;
-  font-size: 0.9rem;
-  color: var(--color-ink);
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
 }
 
-.chip1 { top: 10%; left: 0; }
-.chip2 { right: 0; bottom: 16%; }
+.techBubble {
+  position: absolute;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--border);
+  box-shadow: 0 6px 18px rgba(31, 27, 77, 0.12);
+  pointer-events: none;
+}
+
+.bubblesm {
+  width: 1.55rem;
+  height: 1.55rem;
+}
+
+.bubblemd {
+  width: 2.05rem;
+  height: 2.05rem;
+}
+
+.bubblelg {
+  width: 2.65rem;
+  height: 2.65rem;
+}
+
+.bubblexl {
+  width: 3.35rem;
+  height: 3.35rem;
+}
+
+.techBubble img {
+  width: 58%;
+  height: 58%;
+  object-fit: contain;
+}
+
+.bubbleWordmark img {
+  width: 78%;
+  height: 78%;
+}
+
+@media (max-width: 720px) {
+  .heroVisual {
+    width: min(100%, 300px);
+  }
+
+  .logoMark {
+    width: min(92%, 260px);
+    margin-inline: auto;
+    padding: 1.25rem;
+  }
+
+  .bubblesm {
+    width: 1.35rem;
+    height: 1.35rem;
+  }
+
+  .bubblemd {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+
+  .bubblelg {
+    width: 2.2rem;
+    height: 2.2rem;
+  }
+
+  .bubblexl {
+    width: 2.85rem;
+    height: 2.85rem;
+  }
+}
 
 .projectsBlock {
   padding: clamp(3rem, 7vw, 5rem) 0 clamp(4rem, 8vw, 6rem);
@@ -443,6 +599,7 @@
 }
 
 .contactBand {
+  position: relative;
   border-radius: var(--radius-lg);
   padding: clamp(1.8rem, 4vw, 2.75rem);
   background: var(--surface-deep);
@@ -451,9 +608,10 @@
   gap: 1.1rem;
 }
 
-.contactBand h2 {
+.contactBand h2,
+.contactHeadline {
   font-size: clamp(1.75rem, 4vw, 2.75rem);
-  max-width: 14ch;
+  max-width: 16ch;
   color: var(--text-on-deep);
 }
 
@@ -483,6 +641,21 @@
   box-shadow: none;
 }
 
+@media (max-width: 979px) {
+  .heroGrid {
+    justify-items: center;
+    text-align: center;
+  }
+
+  .heroCopy {
+    justify-items: center;
+  }
+
+  .ctaRow {
+    justify-content: center;
+  }
+}
+
 @media (min-width: 980px) {
   .heroGrid {
     grid-template-columns: 1.15fr 0.85fr;
@@ -496,6 +669,11 @@
 
 @media (prefers-reduced-motion: reduce) {
   .beacon {
+    animation: none;
+  }
+
+  .contactWave,
+  .contactWave::after {
     animation: none;
   }
 
