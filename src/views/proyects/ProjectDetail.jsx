@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'motion/react';
-import { ArrowLeft, Play } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Play } from 'lucide-react';
 import { getProjectBySlug } from '../../data/projects';
 import styles from './ProjectDetail.module.css';
 
@@ -146,11 +146,23 @@ export default function ProjectDetail() {
           </div>
           <h1>{project.title}</h1>
           <p>{project.summary}</p>
-          {project.demoVideo && (
+          {(project.demoVideo || project.links?.demo) && (
             <div className={styles.heroActions}>
-              <button type="button" className="btn btn-primary" onClick={() => setShowDemo(true)}>
-                <Play size={18} /> Ver demo
-              </button>
+              {project.demoVideo && (
+                <button type="button" className="btn btn-primary" onClick={() => setShowDemo(true)}>
+                  <Play size={18} /> Ver demo
+                </button>
+              )}
+              {project.links?.demo && (
+                <a
+                  className="btn btn-ghost"
+                  href={project.links.demo}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <ExternalLink size={18} /> Ver sitio
+                </a>
+              )}
             </div>
           )}
         </motion.div>

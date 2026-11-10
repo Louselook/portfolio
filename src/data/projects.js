@@ -22,6 +22,13 @@ import goalRendimiento from '../assets/proyectsImage/proyects/App Goalkeeper Mob
 import goalAsistencias from '../assets/proyectsImage/proyects/App Goalkeeper Mobile/asistencias.mp4';
 import goalDemo from '../assets/proyectsImage/proyects/App Goalkeeper Mobile/guia.mp4';
 
+import rifadasMain from '../assets/proyectsImage/proyects/Rifadas/main.png';
+import rifadasGaleria from '../assets/proyectsImage/proyects/Rifadas/galeria.png';
+import rifadasAfiche from '../assets/proyectsImage/proyects/Rifadas/afiche.png';
+import rifadasEstudio from '../assets/proyectsImage/proyects/Rifadas/estudio.png';
+import rifadasPanel from '../assets/proyectsImage/proyects/Rifadas/panel.png';
+import rifadasTarifas from '../assets/proyectsImage/proyects/Rifadas/tarifas.png';
+
 export const projects = [
   {
     id: 'consulta-gpt-excel',
@@ -193,6 +200,74 @@ export const projects = [
     ],
     links: {},
     legacyPath: '/appGoalkeepersFlutter',
+  },
+  {
+    id: 'rifadas',
+    slug: 'rifadas',
+    title: 'Rifadas',
+    summary:
+      'Plataforma web en Colombia para que organizadores diseñen afiches, publiquen en galería y administren números e interesados; visitantes exploran, apartan y contactan por WhatsApp. Fullstack propio con Wompi, KYC y tiempo real.',
+    role: 'fullstack',
+    type: 'personal',
+    stack: ['React', 'Django', 'PostgreSQL', 'AWS', 'Wompi'],
+    cover: rifadasMain,
+    accent: 'ink',
+    chapters: [
+      {
+        layout: 'text-left',
+        title: 'El problema',
+        body: 'Organizar un producto para rifar solía ser un caos de Canva, Excel y chats sueltos. Quien compra tampoco tenía un lugar claro para descubrir afiches, apartar números y hablar con el organizador.',
+        media: { type: 'image', src: rifadasGaleria },
+      },
+      {
+        layout: 'text-right',
+        title: 'Para quien organiza',
+        body: 'Estudio con canvas y plantillas, publicación a la galería, panel de productos, equipo y verificación de identidad. El organizador controla el flujo de punta a punta sin perder el trato directo por WhatsApp.',
+        media: { type: 'image', src: rifadasEstudio },
+      },
+      {
+        layout: 'feature-switcher',
+        title: 'Soluciones del producto',
+        body: 'Marketplace, apartado en vivo, panel operativo y billing de la plataforma. Cada módulo muestra una capa distinta del sistema.',
+        features: [
+          {
+            title: 'Galería y descubrimiento',
+            description:
+              'Visitantes buscan y filtran afiches publicados: premio, lotería, cifras y disponibilidad, sin crear cuenta.',
+            media: { type: 'image', src: rifadasGaleria },
+            duration: 8000,
+          },
+          {
+            title: 'Apartar números en vivo',
+            description:
+              'Grid de números con estado en tiempo real (WebSockets). El interesado selecciona y escribe al organizador por WhatsApp.',
+            media: { type: 'image', src: rifadasAfiche },
+            duration: 8000,
+          },
+          {
+            title: 'Panel y control operativo',
+            description:
+              'Borradores, productos activos, métricas de boletas y gestión del ciclo de vida: publicar, archivar y verificar identidad.',
+            media: { type: 'image', src: rifadasPanel },
+            duration: 8000,
+          },
+          {
+            title: 'Planes y cobro con Wompi',
+            description:
+              'Suscripciones, paquetes y publicaciones unitarias. Wompi cobra solo por usar la plataforma; el dinero del boleto sigue entre particulares.',
+            media: { type: 'image', src: rifadasTarifas },
+            duration: 8000,
+          },
+        ],
+      },
+      {
+        layout: 'text-left',
+        title: 'Stack fullstack',
+        body: 'React en Vercel; Django + DRF + Channels en AWS (EC2, RDS PostgreSQL, S3, Redis). Auth JWT, KYC con liveness, webhooks Wompi y SEO/branding listos para producción en rifadas.com.',
+        media: { type: 'image', src: rifadasPanel },
+      },
+    ],
+    links: { demo: 'https://www.rifadas.com' },
   },
 ];
 
