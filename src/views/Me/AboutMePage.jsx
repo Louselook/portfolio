@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'motion/react';
 import { profile } from '../../data/profile';
 import cvUrl from '../../assets/docs/CVJuanes.pdf_2026_8_6.pdf';
+import PuzzlePhoto from './PuzzlePhoto';
 import styles from './AboutMePage.module.css';
 
 export default function AboutMePage() {
@@ -36,13 +37,9 @@ export default function AboutMePage() {
               </Link>
             </div>
           </motion.div>
-          <motion.div
-            className={styles.photo}
-            initial={reduce ? false : { opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-          >
-            <img src={profile.photos[0]} alt={profile.name} />
-          </motion.div>
+          <div className={styles.photo}>
+            <PuzzlePhoto src={profile.photos[0]} alt={profile.name} />
+          </div>
         </div>
 
         <section className={styles.block}>
