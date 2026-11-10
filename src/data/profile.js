@@ -1,3 +1,5 @@
+import mePhoto from '../assets/me/me.jpg';
+
 export const profile = {
   name: 'Juan Esteban Arenilla Buendia',
   shortName: 'Juanes',
@@ -85,5 +87,5 @@ export const profile = {
         'Experiencia en desarrollo con Arduino y formularios en Visual Studio para prototipos y control.',
     },
   ],
-  photos: ['/assets/me.png', '/assets/me2.png', '/assets/me3.png', '/assets/me4.png'],
+  photos: [mePhoto, '/assets/me2.png', '/assets/me3.png', '/assets/me4.png'],
 };
