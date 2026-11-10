@@ -12,6 +12,13 @@ import { projects } from '../../data/projects';
 import { getStackIcon } from '../../data/stackIcons';
 import ProjectsCarousel from '../../components/projects/ProjectsCarousel';
 import styles from './HomePage.module.css';
+import {
+  simplifyPoints,
+  roundedPath,
+  smoothDamp,
+  buildTipTable,
+  tailFromVelocity,
+} from './trailSmoothing';
 
 const BUBBLE_NAMES = ['Flutter', 'FastAPI', 'React', 'Python', 'Supabase', 'Firebase'];
 const BUBBLE_SIZES = ['sm', 'md', 'lg'];
@@ -110,18 +117,17 @@ function buildHeroBubbles() {
 const TRAIL_COLOR = '#FF6A3D';
 /** Stroke widths in viewBox units so dasharray stays in the same space as the path. */
 const TRAIL_BASE_W = 0.42;
-/** Estela: más larga = fina/tenue; más corta = gruesa/brillante */
+/** Capas cercanas en ancho para evitar escalones visibles. */
 const TRAIL_LAYERS = [
-  { k: 1.0, o: 0.28, w: 0.48 },
-  { k: 0.62, o: 0.55, w: 0.62 },
-  { k: 0.3, o: 0.92, w: 0.82 },
+  { k: 1.0, o: 0.22, w: 0.46 },
+  { k: 0.62, o: 0.5, w: 0.54 },
+  { k: 0.3, o: 0.9, w: 0.66 },
 ];
-const TRAIL_SMOOTH = 0.08;
-const TRAIL_SMOOTH_FAST = 0.2;
-const TRAIL_MIN_TAIL = 0.035;
-const TRAIL_MAX_TAIL = 0.16;
 /** Tip sits in the upper half of the viewport (fraction of window height). */
 const TIP_VIEW_ANCHOR = 0.38;
+const TIP_SAMPLE_N = 320;
+/** Projection samples — built once per path, then reused for every waypoint. */
+const META_SAMPLE_N = 180;
 
 /** Dash pattern (pathLength=1) that only paints frontRanges up to tip progress. */
 function frontStrokeDash(tipU, frontRanges) {
@@ -150,35 +156,6 @@ function frontStrokeDash(tipU, frontRanges) {
   return { dasharray: dash.join(' '), visible: true };
 }
 
-/**
- * Largest path fraction whose document Y is still at or above the viewport anchor.
- * Loops that dip below don't pull the tip off the upper half of the window.
- */
-function tipProgressForAnchor(path, pageEl, anchorDocY) {
-  if (!path || !pageEl) return 0;
-  let total = 0;
-  try {
-    total = path.getTotalLength();
-  } catch {
-    return 0;
-  }
-  if (!total) return 0;
-
-  const pageH = Math.max(pageEl.offsetHeight, 1);
-  const yAt = (u) => {
-    const p = path.getPointAtLength(clamp(u, 0, 1) * total);
-    return (p.y / VIEW_H) * pageH;
-  };
-
-  const samples = 96;
-  let best = 0;
-  for (let i = 0; i <= samples; i += 1) {
-    const u = i / samples;
-    if (yAt(u) <= anchorDocY) best = u;
-  }
-  return best;
-}
-
 const fadeUp = {
   hidden: { opacity: 0, y: 28 },
   show: { opacity: 1, y: 0 },
@@ -190,64 +167,118 @@ function clamp(v, min, max) {
   return Math.min(max, Math.max(min, v));
 }
 
-/** Catmull-Rom → cubic Bézier. Lower tension = softer curves. */
-function catmullRomPath(points, tension = 0.5) {
-  if (!points.length) return '';
-  if (points.length === 1) {
-    const p = points[0];
-    return `M ${p.x.toFixed(2)} ${p.y.toFixed(2)} L ${p.x.toFixed(2)} ${(p.y + 40).toFixed(2)}`;
-  }
-
-  const cx = (v) => clamp(v, 8, 92);
-  let d = `M ${cx(points[0].x).toFixed(2)} ${points[0].y.toFixed(2)}`;
-
-  for (let i = 0; i < points.length - 1; i += 1) {
-    const p0 = points[i - 1] || points[i];
-    const p1 = points[i];
-    const p2 = points[i + 1];
-    const p3 = points[i + 2] || p2;
-
-    const cp1x = cx(p1.x + ((p2.x - p0.x) / 6) * tension);
-    const cp1y = p1.y + ((p2.y - p0.y) / 6) * tension;
-    const cp2x = cx(p2.x - ((p3.x - p1.x) / 6) * tension);
-    const cp2y = p2.y - ((p3.y - p1.y) / 6) * tension;
-
-    d += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)}, ${cp2x.toFixed(2)} ${cp2y.toFixed(2)}, ${cx(p2.x).toFixed(2)} ${p2.y.toFixed(2)}`;
-  }
-
-  return d;
-}
-
-/** Soft mids on medium/long jumps for fluid curves. */
-function withSoftMids(points) {
+/** Soft lateral S with sinusoidal envelope (no hard sign flips). */
+function snakeLateral(points) {
   if (points.length < 2) return points;
   const out = [points[0]];
   for (let i = 1; i < points.length; i += 1) {
     const a = points[i - 1];
     const b = points[i];
-    const dist = Math.hypot(b.x - a.x, ((b.y - a.y) / VIEW_H) * 100);
-    if (dist < 3.2) {
-      out.push(b);
-      continue;
+    const dx = b.x - a.x;
+    const dy = ((b.y - a.y) / VIEW_H) * 100;
+    const len = Math.hypot(dx, dy);
+    if (len >= 14 && !a.id && !b.id) {
+      const inv = len || 1;
+      const env = Math.sin(Math.PI * 0.5);
+      const amp = 1.2 * env * (i % 2 === 0 ? 1 : -1);
+      out.push({
+        x: clamp((a.x + b.x) / 2 + (-dy / inv) * amp, 8, 92),
+        y: (a.y + b.y) / 2 + ((dx / inv) * amp * VIEW_H) / 100,
+        layer: b.layer || a.layer || 'back',
+      });
     }
-    out.push({
-      x: a.x * 0.75 + b.x * 0.25,
-      y: a.y * 0.72 + b.y * 0.28,
-      layer: a.layer || 'back',
-    });
-    out.push({
-      x: a.x * 0.5 + b.x * 0.5,
-      y: a.y * 0.5 + b.y * 0.5,
-      layer: b.layer || a.layer || 'back',
-    });
-    out.push({
-      x: a.x * 0.25 + b.x * 0.75,
-      y: a.y * 0.28 + b.y * 0.72,
-      layer: b.layer || 'back',
-    });
     out.push(b);
   }
   return out;
+}
+
+function buildRibbonD(points) {
+  if (points.length < 2) return '';
+  const waved = snakeLateral(points);
+  return roundedPath(simplifyPoints(waved, 28), { maxFrac: 0.5 });
+}
+
+/** Sample path once; nearest-u queries become cheap distance checks. */
+function buildPathSampleTable(pathEl, samples = META_SAMPLE_N) {
+  let total = 0;
+  try {
+    total = pathEl.getTotalLength();
+  } catch {
+    return null;
+  }
+  if (!total) return null;
+  const xs = new Float32Array(samples + 1);
+  const ys = new Float32Array(samples + 1);
+  for (let i = 0; i <= samples; i += 1) {
+    const p = pathEl.getPointAtLength((total * i) / samples);
+    xs[i] = p.x;
+    ys[i] = p.y;
+  }
+  return { total, samples, xs, ys };
+}
+
+function nearestUFromTable(table, pt, fromIndex = 0) {
+  if (!table) return 0;
+  const { samples, xs, ys } = table;
+  let bestI = fromIndex;
+  let bestD = Infinity;
+  for (let i = Math.max(0, fromIndex); i <= samples; i += 1) {
+    const d = Math.hypot(xs[i] - pt.x, ((ys[i] - pt.y) / VIEW_H) * 100);
+    if (d < bestD) {
+      bestD = d;
+      bestI = i;
+    }
+  }
+  return bestI / samples;
+}
+
+/** Project hard waypoints onto final SVG path for markers + frontRanges. */
+function projectMetaOntoPath(pathEl, waypoints) {
+  const markers = {
+    projectsTitle: 0.2,
+    projectsZone: 0.28,
+    stackTitle: 0.4,
+    stackChips: [],
+    expTitle: 0.55,
+    expItems: [],
+    contact: 0.85,
+    contactHot: 0.93,
+  };
+  const frontRanges = [];
+  if (!pathEl || !waypoints.length) return { markers, frontRanges };
+
+  const table = buildPathSampleTable(pathEl, META_SAMPLE_N);
+  if (!table) return { markers, frontRanges };
+
+  let frontStart = null;
+  let prevI = 0;
+  waypoints.forEach((wp) => {
+    const u = nearestUFromTable(table, wp, prevI);
+    const ordered = Math.max(prevI / table.samples, u);
+    prevI = Math.floor(ordered * table.samples);
+
+    if (wp.id === 'projectsTitle') markers.projectsTitle = ordered;
+    if (wp.id === 'projectsZone') markers.projectsZone = ordered;
+    if (wp.id === 'stackTitle') markers.stackTitle = ordered;
+    if (wp.id === 'expTitle') markers.expTitle = ordered;
+    if (wp.id === 'contact') markers.contact = ordered;
+    if (wp.id === 'contactHot') markers.contactHot = ordered;
+    if (wp.id?.startsWith('chip:')) {
+      markers.stackChips[Number(wp.id.slice(5))] = ordered;
+    }
+    if (wp.id?.startsWith('exp:')) {
+      markers.expItems[Number(wp.id.slice(4))] = ordered;
+    }
+
+    if (wp.layer === 'front') {
+      if (frontStart == null) frontStart = Math.max(0, ordered - 0.004);
+    } else if (frontStart != null) {
+      frontRanges.push([frontStart, Math.min(1, ordered + 0.004)]);
+      frontStart = null;
+    }
+  });
+  if (frontStart != null) frontRanges.push([frontStart, 1]);
+  return { markers, frontRanges };
 }
 
 /** Logo (or any el) as ellipse center/radii in path viewBox units. */
@@ -301,8 +332,7 @@ function densifyControls(controls, stepsPerSeg = 10) {
 }
 
 /**
- * U around the logo — always behind the card so the tip never pops in front.
- * straight in → soft turn → flat under the name → ease out.
+ * Wide S behind the card — always back, headings stay under ~60°.
  */
 function pushLogoWeave(list, ellipse) {
   if (!ellipse) return;
@@ -314,40 +344,33 @@ function pushLogoWeave(list, ellipse) {
   });
 
   const controls = [
-    at(-1.1, 0.12),
-    at(-0.35, 0.14),
-    at(0.35, 0.16),
-    at(0.9, 0.22),
-    at(1.18, 0.4),
-    at(1.22, 0.62),
-    at(1.05, 0.82),
-    at(0.55, 0.86),
-    at(0.05, 0.88),
-    at(-0.4, 0.9),
-    at(-0.7, 1.15),
-    at(-0.8, 1.45),
+    at(-1.15, 0.0),
+    at(-0.35, 0.22),
+    at(0.45, 0.42),
+    at(1.05, 0.62),
+    at(0.45, 0.82),
+    at(-0.25, 1.02),
+    at(-0.7, 1.28),
+    at(-0.35, 1.58),
   ];
 
-  densifyControls(controls, 24).forEach((p) => pushWp(list, p, 'back'));
+  densifyControls(controls, 4).forEach((p) => pushWp(list, p, 'back'));
 }
 
 function fallbackPathFromOrigin(origin) {
   const x = clamp(origin?.x ?? 28, 10, 70);
   const y = origin?.y ?? 160;
-  return catmullRomPath(
-    withSoftMids([
-      { x, y },
-      { x: x + 14, y: y + 160 },
-      { x: 62, y: y + 300 },
-      { x: 48, y: y + 440 },
-      { x: 28, y: y + 580 },
-      { x: 58, y: y + 720 },
-      { x: 42, y: y + 860 },
-      { x: 55, y: y + 1000 },
-      { x: 46, y: 1185 },
-    ]),
-    0.48
-  );
+  return buildRibbonD([
+    { x, y },
+    { x: x + 14, y: y + 160 },
+    { x: 62, y: y + 300 },
+    { x: 48, y: y + 440 },
+    { x: 28, y: y + 580 },
+    { x: 58, y: y + 720 },
+    { x: 42, y: y + 860 },
+    { x: 55, y: y + 1000 },
+    { x: 46, y: 1185 },
+  ]);
 }
 
 function pointFromEl(pageEl, el, anchor = 'center', nudge = null) {
@@ -407,59 +430,6 @@ function pushWp(list, pt, layer = 'back', id = null) {
   list.push({ x: pt.x, y: pt.y, layer, id });
 }
 
-/** Arc-length fractions so front/back match getPointAtLength tip progress. */
-function markersFromCoords(coords) {
-  const markers = {
-    projectsTitle: 0.2,
-    projectsZone: 0.28,
-    stackTitle: 0.4,
-    stackChips: [],
-    expTitle: 0.55,
-    expItems: [],
-    contact: 0.85,
-    contactHot: 0.93,
-  };
-
-  let total = 0;
-  const cum = [0];
-  for (let i = 1; i < coords.length; i += 1) {
-    const dx = coords[i].x - coords[i - 1].x;
-    const dy = ((coords[i].y - coords[i - 1].y) / VIEW_H) * 100;
-    total += Math.hypot(dx, dy);
-    cum.push(total);
-  }
-  const denom = Math.max(total, 1e-6);
-
-  const frontRanges = [];
-  let frontStart = null;
-
-  coords.forEach((p, i) => {
-    const u = cum[i] / denom;
-    if (p.id === 'projectsTitle') markers.projectsTitle = u;
-    if (p.id === 'projectsZone') markers.projectsZone = u;
-    if (p.id === 'stackTitle') markers.stackTitle = u;
-    if (p.id === 'expTitle') markers.expTitle = u;
-    if (p.id === 'contact') markers.contact = u;
-    if (p.id === 'contactHot') markers.contactHot = u;
-    if (p.id?.startsWith('chip:')) {
-      markers.stackChips[Number(p.id.slice(5))] = u;
-    }
-    if (p.id?.startsWith('exp:')) {
-      markers.expItems[Number(p.id.slice(4))] = u;
-    }
-
-    if (p.layer === 'front') {
-      if (frontStart == null) frontStart = Math.max(0, u - 0.004);
-    } else if (frontStart != null) {
-      frontRanges.push([frontStart, Math.min(1, u + 0.004)]);
-      frontStart = null;
-    }
-  });
-  if (frontStart != null) frontRanges.push([frontStart, 1]);
-
-  return { markers, frontRanges };
-}
-
 function Section({ children, className = '', id, tone = 'light', sectionRef }) {
   const reduce = useReducedMotion();
   return (
@@ -502,7 +472,10 @@ function ScrollAtmosphere({ pageRef, refs, onProgress, expCount, skillCount }) {
   const headBackRef = useRef(null);
   const headFrontRef = useRef(null);
   const tipProgressRef = useRef(0);
+  const tipVelRef = useRef(0);
+  const tipTableRef = useRef(null);
   const litEmitAtRef = useRef(0);
+  const pendingMetaRef = useRef([]);
   const pathMetaRef = useRef({
     markers: {
       projectsTitle: 0.2,
@@ -608,21 +581,30 @@ function ScrollAtmosphere({ pageRef, refs, onProgress, expCount, skillCount }) {
       pushWp(hard, { x: clamp(stackTitle.x + 14, 18, 50), y: stackTitle.y + 28 }, 'back');
     }
 
+    // Stack: one soft diagonal per row (entry → exit), not one point per chip
+    const chipMarkers = [];
     if (skillChips.length) {
+      const rows = new Map();
       skillChips.forEach((el, i) => {
         const row = Math.floor(i / 6);
-        const col = i % 6;
-        const sway = col % 2 === 0 ? -2 : 2;
-        const p = pointFromEl(page, el, 'center', { x: sway, y: row * 2 });
-        pushWp(hard, p, 'back', `chip:${i}`);
-        // gentle bridge to next chip
-        if (i < skillChips.length - 1 && col === 5) {
-          pushWp(
-            hard,
-            pointFromEl(page, el, 'bottom', { x: -8, y: 18 }),
-            'back'
-          );
-        }
+        if (!rows.has(row)) rows.set(row, []);
+        rows.get(row).push({ el, i });
+        const c = pointFromEl(page, el, 'center');
+        if (c) chipMarkers.push({ ...c, layer: 'back', id: `chip:${i}` });
+      });
+      rows.forEach((items) => {
+        const first = items[0];
+        const last = items[items.length - 1];
+        pushWp(
+          hard,
+          pointFromEl(page, first.el, 'left', { x: -2, y: -6 }),
+          'back'
+        );
+        pushWp(
+          hard,
+          pointFromEl(page, last.el, 'right', { x: 2, y: 8 }),
+          'back'
+        );
       });
     } else {
       const stk = pointFromEl(page, stackEl, 'left', { x: 10 });
@@ -659,30 +641,44 @@ function ScrollAtmosphere({ pageRef, refs, onProgress, expCount, skillCount }) {
     pushWp(hard, mark || (contact ? { x: contact.x + 10, y: contact.y + 165 } : null), 'front', 'contactHot');
 
     const coords = hard.map(({ x, y, layer, id }) => ({ x, y, layer, id }));
-    const smoothed = coords.length >= 2 ? withSoftMids(coords) : coords;
-    pathMetaRef.current = markersFromCoords(smoothed);
-
     const next =
-      smoothed.length >= 2
-        ? catmullRomPath(smoothed, 0.35)
+      coords.length >= 2
+        ? buildRibbonD(coords)
         : fallbackPathFromOrigin(start || { x: 28, y: 180 });
 
-    setRibbonPath((prev) => (prev === next ? prev : next));
+    // Path geometry + markers for later projection onto the live SVG path
+    pendingMetaRef.current = [...coords, ...chipMarkers];
+    setRibbonPath((prev) => {
+      if (prev === next) {
+        // Layout shifted but d-string identical — cheap table-based reproject
+        if (baseRef.current) {
+          pathMetaRef.current = projectMetaOntoPath(
+            baseRef.current,
+            pendingMetaRef.current
+          );
+        }
+        return prev;
+      }
+      return next;
+    });
   }, [pageRef, refs]);
 
   useEffect(() => {
     measure();
-    const id = requestAnimationFrame(() => {
-      measure();
-      requestAnimationFrame(measure);
-    });
-    const timers = [80, 200, 600, 1200].map((ms) => window.setTimeout(measure, ms));
-    window.addEventListener('resize', measure);
+    const id = requestAnimationFrame(measure);
+    const timers = [120, 500].map((ms) => window.setTimeout(measure, ms));
+    let resizeTimer = 0;
+    const onResize = () => {
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(measure, 120);
+    };
+    window.addEventListener('resize', onResize);
     document.fonts?.ready?.then?.(measure);
     return () => {
       cancelAnimationFrame(id);
       timers.forEach(clearTimeout);
-      window.removeEventListener('resize', measure);
+      window.clearTimeout(resizeTimer);
+      window.removeEventListener('resize', onResize);
     };
   }, [measure]);
 
@@ -763,7 +759,8 @@ function ScrollAtmosphere({ pageRef, refs, onProgress, expCount, skillCount }) {
     const frontLayers = frontLayerRefs.current;
     const headBack = headBackRef.current;
     const headFront = headFrontRef.current;
-    if (!base || !ribbonPath) return;
+    const svg = base?.ownerSVGElement;
+    if (!base || !ribbonPath || !svg) return;
 
     let total = 0;
     try {
@@ -773,51 +770,81 @@ function ScrollAtmosphere({ pageRef, refs, onProgress, expCount, skillCount }) {
     }
     if (!total) return;
 
-    const readTarget = () => {
+    // Project section markers / frontRanges onto the live path
+    pathMetaRef.current = projectMetaOntoPath(base, pendingMetaRef.current);
+
+    const rebuildTipTable = () => {
+      const rect = svg.getBoundingClientRect();
       const page = pageRef.current;
-      if (!page) return 0;
+      const pageTop = page
+        ? page.getBoundingClientRect().top + window.scrollY
+        : 0;
+      // preserveAspectRatio="none" → independent X/Y scale into page px
+      const scaleX = rect.width / 100;
+      const scaleY = rect.height / VIEW_H;
+      const top = rect.top + window.scrollY - pageTop;
+      tipTableRef.current = buildTipTable(base, {
+        scaleX,
+        scaleY,
+        top,
+        samples: TIP_SAMPLE_N,
+      });
+      try {
+        total = base.getTotalLength();
+      } catch {
+        /* keep previous */
+      }
+    };
+    rebuildTipTable();
+
+    const readTarget = () => {
+      const originEl = refs.origin?.current;
+      const originRect = originEl?.getBoundingClientRect();
+      const releaseY = window.innerHeight * 0.22;
+      if (!originRect || originRect.top + originRect.height / 2 >= releaseY) {
+        return 0;
+      }
+      const table = tipTableRef.current;
+      if (!table) return tipProgressRef.current;
+      const key = window.scrollY + TIP_VIEW_ANCHOR * window.innerHeight;
+      let u = table.progressForKey(key);
       const maxScroll = Math.max(
         document.documentElement.scrollHeight - window.innerHeight,
         1
       );
       const scrollP = clamp(window.scrollY / maxScroll, 0, 1);
-      const anchorY = window.innerHeight * TIP_VIEW_ANCHOR;
-      const originEl = refs.origin?.current;
-      const originRect = originEl?.getBoundingClientRect();
-      // Park on the title “.” until it scrolls above ~22% of the viewport
-      const releaseY = window.innerHeight * 0.22;
-      if (
-        !originRect ||
-        originRect.top + originRect.height / 2 >= releaseY
-      ) {
-        return 0;
-      }
-      const anchorDocY = window.scrollY + anchorY;
-      let u = tipProgressForAnchor(base, page, anchorDocY);
       if (scrollP > 0.92) u = Math.max(u, (scrollP - 0.92) / 0.08);
       return clamp(u, 0, 1);
     };
 
     let target = readTarget();
-    // Always resync on mount so HMR / remount doesn't leave the tip beside the “.”
-    let current = target;
-    tipProgressRef.current = current;
-    let tail = TRAIL_MIN_TAIL;
+    let current = tipProgressRef.current || target;
+    let vel = tipVelRef.current || 0;
+    let tail = 0.035;
     let raf = null;
+    let lastT = performance.now();
 
     const setVis = (el, on) => {
       if (!el) return;
       el.style.visibility = on ? 'visible' : 'hidden';
     };
 
+    let pageW = Math.max(pageRef.current?.offsetWidth || 0, 1);
+    let pageH = Math.max(pageRef.current?.offsetHeight || 0, 1);
+    const refreshPageSize = () => {
+      pageW = Math.max(pageRef.current?.offsetWidth || 0, 1);
+      pageH = Math.max(pageRef.current?.offsetHeight || 0, 1);
+    };
+
     const placeHead = (el, xPct, yPct, on) => {
       if (!el) return;
-      el.style.left = `${xPct}%`;
-      el.style.top = `${yPct}%`;
+      el.style.left = '0';
+      el.style.top = '0';
+      el.style.margin = '0';
+      el.style.transform = `translate3d(${(xPct / 100) * pageW}px, ${(yPct / 100) * pageH}px, 0) translate(-50%, -50%)`;
       setVis(el, on);
     };
 
-    /** Snap tip to the real title “.” so it sits behind the period, not beside it. */
     const headFromOrigin = () => {
       const page = pageRef.current;
       const originEl = refs.origin?.current;
@@ -840,13 +867,11 @@ function ScrollAtmosphere({ pageRef, refs, onProgress, expCount, skillCount }) {
     const render = () => {
       const atOrigin = current < 0.0015;
       const u = atOrigin ? 0 : current;
-      const visible = true;
       const frontRanges = pathMetaRef.current.frontRanges || [];
       const tipOnFront = !atOrigin && frontRanges.some(([a, b]) => current >= a && current <= b);
 
-      // Tiny speck when parked so the path still has a start mark under the “.”
       base.setAttribute('stroke-dasharray', `${Math.max(u, 0.0004)} 1`);
-      setVis(base, visible);
+      setVis(base, true);
 
       const tailLen = atOrigin ? 0 : Math.min(tail, u);
       layers.forEach((el, i) => {
@@ -864,12 +889,12 @@ function ScrollAtmosphere({ pageRef, refs, onProgress, expCount, skillCount }) {
       const front = frontStrokeDash(current, frontRanges);
       if (frontBase) {
         frontBase.setAttribute('stroke-dasharray', front.dasharray);
-        setVis(frontBase, visible && front.visible && !atOrigin);
+        setVis(frontBase, front.visible && !atOrigin);
       }
 
       frontLayers.forEach((el, i) => {
         if (!el) return;
-        if (!tipOnFront || !visible) {
+        if (!tipOnFront) {
           setVis(el, false);
           return;
         }
@@ -879,52 +904,48 @@ function ScrollAtmosphere({ pageRef, refs, onProgress, expCount, skillCount }) {
         setVis(el, true);
       });
 
-      let headPct = null;
-      if (atOrigin) {
-        headPct = headFromOrigin();
-      }
+      let headPct = atOrigin ? headFromOrigin() : null;
       if (!headPct) {
-        let p = { x: 0, y: 0 };
-        try {
-          p = base.getPointAtLength(Math.min(Math.max(u, 0), 1) * total);
-        } catch {
-          /* ignore */
-        }
+        const table = tipTableRef.current;
+        const p = table?.pointAt?.(u) || { x: 0, y: 0 };
         headPct = { x: p.x, y: (p.y / VIEW_H) * 100 };
       }
 
-      // Always the back head when parked on the title “.” (behind the period)
-      placeHead(headBack, headPct.x, headPct.y, visible && (atOrigin || !tipOnFront));
-      placeHead(headFront, headPct.x, headPct.y, visible && tipOnFront);
+      placeHead(headBack, headPct.x, headPct.y, atOrigin || !tipOnFront);
+      placeHead(headFront, headPct.x, headPct.y, tipOnFront);
 
       tipProgressRef.current = current;
+      tipVelRef.current = vel;
     };
 
-    const tick = () => {
-      const diff = target - current;
-      const speed = Math.abs(diff);
-      const smooth = reduce
-        ? 1
-        : TRAIL_SMOOTH +
-          clamp((speed - 0.04) / 0.12, 0, 1) * (TRAIL_SMOOTH_FAST - TRAIL_SMOOTH);
-      current += diff * smooth;
+    const tick = (now) => {
+      const dt = Math.max(0.001, Math.min((now - lastT) / 1000, 1 / 30));
+      lastT = now;
+      target = readTarget();
 
-      const tailTarget =
-        TRAIL_MIN_TAIL + clamp(speed * 28, 0, 1) * (TRAIL_MAX_TAIL - TRAIL_MIN_TAIL);
+      if (reduce) {
+        current = target;
+        vel = 0;
+      } else {
+        const s = smoothDamp(current, target, vel, 0.35, dt, 0.9);
+        current = s.value;
+        vel = s.velocity;
+      }
+
+      const tailTarget = tailFromVelocity(vel);
       tail += (tailTarget - tail) * 0.12;
 
       render();
 
-      const now = performance.now();
-      if (speed > 0.00005 && now - litEmitAtRef.current > 50) {
-        litEmitAtRef.current = now;
-        emitProgress(current);
-      }
-
-      if (speed > 0.00005 || Math.abs(tailTarget - tail) > 0.0005) {
+      if (Math.abs(target - current) > 0.00005 || Math.abs(vel) > 0.0005) {
+        if (now - litEmitAtRef.current > 50) {
+          litEmitAtRef.current = now;
+          emitProgress(current);
+        }
         raf = requestAnimationFrame(tick);
       } else {
         current = target;
+        vel = 0;
         render();
         emitProgress(current);
         raf = null;
@@ -933,31 +954,40 @@ function ScrollAtmosphere({ pageRef, refs, onProgress, expCount, skillCount }) {
 
     const kick = () => {
       target = readTarget();
+      lastT = performance.now();
       if (raf === null) raf = requestAnimationFrame(tick);
     };
 
-    current = target;
-    tipProgressRef.current = current;
+    let resizeTimer = 0;
+    const onResize = () => {
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(() => {
+        refreshPageSize();
+        rebuildTipTable();
+        kick();
+      }, 100);
+    };
+
     render();
     emitProgress(current);
+    kick();
 
     const unsub = scrollYProgress.on('change', (v) => {
-      target = readTarget();
       const root = pageRef.current;
       if (root) {
         root.dataset.depth = v > 0.48 ? 'deep' : v > 0.28 ? 'mid' : 'top';
       }
-      if (v > 0 && v < 0.05) measure();
-      if (raf === null) raf = requestAnimationFrame(tick);
+      kick();
     });
 
-    window.addEventListener('resize', kick);
+    window.addEventListener('resize', onResize);
     return () => {
       unsub();
-      window.removeEventListener('resize', kick);
+      window.removeEventListener('resize', onResize);
+      window.clearTimeout(resizeTimer);
       if (raf !== null) cancelAnimationFrame(raf);
     };
-  }, [ribbonPath, reduce, scrollYProgress, emitProgress, measure, pageRef]);
+  }, [ribbonPath, reduce, scrollYProgress, emitProgress, pageRef, refs]);
 
   const trailSvgProps = {
     className: styles.trailSvg,

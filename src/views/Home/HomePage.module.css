@@ -99,8 +99,6 @@
   position: absolute;
   width: 22px;
   height: 22px;
-  margin-left: -11px;
-  margin-top: -11px;
   border-radius: 50%;
   background:
     radial-gradient(circle, #fff 0%, #ffe0c2 22%, #ff6a3d 48%, rgba(255, 106, 61, 0.15) 70%, transparent 78%);
@@ -111,8 +109,9 @@
     0 0 80px 22px rgba(255, 106, 61, 0.28);
   z-index: 5;
   animation: tipFlicker 2.4s ease-in-out infinite;
-  will-change: left, top, opacity, filter;
+  will-change: transform, opacity;
   pointer-events: none;
+  transition: none;
 }
 
 .dust {
@@ -134,14 +133,10 @@
 
 @keyframes tipFlicker {
   0%, 100% {
-    transform: scale(1);
-    opacity: 0.92;
-    filter: brightness(1);
+    opacity: 0.85;
   }
   50% {
-    transform: scale(1.08);
     opacity: 1;
-    filter: brightness(1.12);
   }
 }
 
